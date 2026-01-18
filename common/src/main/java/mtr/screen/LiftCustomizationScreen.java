@@ -35,12 +35,22 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 	private final Button buttonLiftStyle;
 	private final Button buttonRotateAnticlockwise;
 	private final Button buttonRotateClockwise;
+	private final Button buttonAccelerationMinus;
+	private final Button buttonAccelerationAdd;
+	private final Button buttonMaxSpeedMinus;
+	private final Button buttonMaxSpeedAdd;
 	private final int width1;
 	private final int width2;
 
-	private static final int MIN_DIMENSION = 2;
-	private static final int MAX_DIMENSION = 16;
-	private static final int MAX_OFFSET = 16;
+	private static final int MIN_DIMENSION = 1;
+	private static final int MAX_DIMENSION = 20;
+	private static final int MAX_OFFSET = 20;
+	private static final float MIN_ACCELERATION = 0.001F;
+	private static final float MAX_ACCELERATION = 0.05F;
+	private static final float MIN_SPEED = 0.1F;
+	private static final float MAX_SPEED = 1.0F;
+	private static final float ACCELERATION_STEP = 0.001F;
+	private static final float SPEED_STEP = 0.05F;
 
 	public LiftCustomizationScreen(LiftClient lift) {
 		super(Text.literal(""));
@@ -94,6 +104,22 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 			lift.liftOffsetZ = Math.min(MAX_OFFSET * 2, lift.liftOffsetZ + 1);
 			updateControls();
 		});
+		buttonAccelerationMinus = UtilitiesClient.newButton(Text.literal("-"), button -> {
+			lift.acceleration = Math.max(MIN_ACCELERATION, lift.acceleration - ACCELERATION_STEP);
+			updateControls();
+		});
+		buttonAccelerationAdd = UtilitiesClient.newButton(Text.literal("+"), button -> {
+			lift.acceleration = Math.min(MAX_ACCELERATION, lift.acceleration + ACCELERATION_STEP);
+			updateControls();
+		});
+		buttonMaxSpeedMinus = UtilitiesClient.newButton(Text.literal("-"), button -> {
+			lift.maxSpeed = Math.max(MIN_SPEED, lift.maxSpeed - SPEED_STEP);
+			updateControls();
+		});
+		buttonMaxSpeedAdd = UtilitiesClient.newButton(Text.literal("+"), button -> {
+			lift.maxSpeed = Math.min(MAX_SPEED, lift.maxSpeed + SPEED_STEP);
+			updateControls();
+		});
 		final Component doubleSidedText = Text.translatable("gui.mtr.lift_is_double_sided");
 		final Component rotateAnticlockwiseText = Text.translatable("gui.mtr.rotate_anticlockwise");
 		final Component rotateClockwiseText = Text.translatable("gui.mtr.rotate_clockwise");
@@ -126,6 +152,10 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		IDrawing.setPositionAndWidth(buttonOffsetYAdd, width1, SQUARE_SIZE * 4, SQUARE_SIZE);
 		IDrawing.setPositionAndWidth(buttonOffsetZMinus, 0, SQUARE_SIZE * 5, SQUARE_SIZE);
 		IDrawing.setPositionAndWidth(buttonOffsetZAdd, width1, SQUARE_SIZE * 5, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonAccelerationMinus, 0, SQUARE_SIZE * 11, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonAccelerationAdd, width1, SQUARE_SIZE * 11, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonMaxSpeedMinus, 0, SQUARE_SIZE * 12, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonMaxSpeedAdd, width1, SQUARE_SIZE * 12, SQUARE_SIZE);
 		IDrawing.setPositionAndWidth(buttonIsDoubleSided, 0, SQUARE_SIZE * 7, width2);
 		IDrawing.setPositionAndWidth(buttonLiftStyle, 0, SQUARE_SIZE * 8, width2);
 		IDrawing.setPositionAndWidth(buttonRotateAnticlockwise, 0, SQUARE_SIZE * 9, width2);
@@ -143,6 +173,10 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		addDrawableChild(buttonOffsetYAdd);
 		addDrawableChild(buttonOffsetZMinus);
 		addDrawableChild(buttonOffsetZAdd);
+		addDrawableChild(buttonAccelerationMinus);
+		addDrawableChild(buttonAccelerationAdd);
+		addDrawableChild(buttonMaxSpeedMinus);
+		addDrawableChild(buttonMaxSpeedAdd);
 		addDrawableChild(buttonIsDoubleSided);
 //		addDrawableChild(buttonLiftStyle);
 		addDrawableChild(buttonRotateAnticlockwise);
@@ -161,6 +195,8 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_x", lift.liftOffsetX / 2F), width2 / 2, SQUARE_SIZE * 3 + TEXT_PADDING, ARGB_WHITE);
 			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_y", lift.liftOffsetY), width2 / 2, SQUARE_SIZE * 4 + TEXT_PADDING, ARGB_WHITE);
 			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_z", lift.liftOffsetZ / 2F), width2 / 2, SQUARE_SIZE * 5 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_acceleration", String.format("%.3f", lift.acceleration)), width2 / 2, SQUARE_SIZE * 11 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_max_speed", String.format("%.2f", lift.maxSpeed)), width2 / 2, SQUARE_SIZE * 12 + TEXT_PADDING, ARGB_WHITE);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -190,6 +226,10 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		buttonOffsetYAdd.active = lift.liftOffsetY < MAX_OFFSET;
 		buttonOffsetZMinus.active = lift.liftOffsetZ > -MAX_OFFSET * 2;
 		buttonOffsetZAdd.active = lift.liftOffsetZ < MAX_OFFSET * 2;
+		buttonAccelerationMinus.active = lift.acceleration > MIN_ACCELERATION;
+		buttonAccelerationAdd.active = lift.acceleration < MAX_ACCELERATION;
+		buttonMaxSpeedMinus.active = lift.maxSpeed > MIN_SPEED;
+		buttonMaxSpeedAdd.active = lift.maxSpeed < MAX_SPEED;
 		buttonIsDoubleSided.setChecked(lift.isDoubleSided);
 		buttonLiftStyle.setMessage(Text.translatable("gui.mtr.lift_style", Text.translatable("gui.mtr.lift_style_" + lift.liftStyle.toString().toLowerCase(Locale.ENGLISH))));
 	}

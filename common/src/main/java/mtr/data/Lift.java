@@ -16,7 +16,12 @@ import org.msgpack.core.MessagePacker;
 import org.msgpack.value.Value;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public abstract class Lift extends NameColorDataBase implements IPacket {
 
@@ -26,6 +31,8 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 	public int liftOffsetX;
 	public int liftOffsetY;
 	public int liftOffsetZ;
+	public float acceleration = 0.02F;
+	public float maxSpeed = 0.5F;
 	public boolean isDoubleSided;
 	public LiftStyle liftStyle;
 	public Direction facing;
@@ -56,6 +63,8 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 	private static final String KEY_IS_DOUBLE_SIDED = "is_double_sided";
 	private static final String KEY_LIFT_STYLE = "lift_style";
 	private static final String KEY_FACING = "facing";
+	private static final String KEY_ACCELERATION = "acceleration";
+	private static final String KEY_MAX_SPEED = "max_speed";
 	private static final String KEY_CURRENT_POSITION_X = "current_position_x";
 	private static final String KEY_CURRENT_POSITION_Y = "current_position_y";
 	private static final String KEY_CURRENT_POSITION_Z = "current_position_z";
@@ -75,6 +84,10 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		currentPositionX = pos.getX();
 		currentPositionY = pos.getY();
 		currentPositionZ = pos.getZ();
+
+		acceleration = 0.02F;
+		maxSpeed = 0.5F;
+
 		liftInstructions = new LiftInstructions();
 	}
 
@@ -94,6 +107,10 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		currentPositionX = messagePackHelper.getDouble(KEY_CURRENT_POSITION_X);
 		currentPositionY = messagePackHelper.getDouble(KEY_CURRENT_POSITION_Y);
 		currentPositionZ = messagePackHelper.getDouble(KEY_CURRENT_POSITION_Z);
+
+		acceleration = (float) messagePackHelper.getDouble(KEY_ACCELERATION, 0.02);
+		maxSpeed = (float) messagePackHelper.getDouble(KEY_MAX_SPEED, 0.5);
+
 		messagePackHelper.iterateArrayValue(KEY_RIDING_ENTITIES, value -> ridingEntities.add(UUID.fromString(value.asStringValue().asString())));
 		messagePackHelper.iterateArrayValue(KEY_FLOORS, entry -> floors.add(BlockPos.of(entry.asIntegerValue().toLong())));
 
@@ -122,6 +139,9 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		doorOpen = packet.readBoolean();
 		doorValue = packet.readFloat();
 
+		acceleration = packet.readFloat();
+		maxSpeed = packet.readFloat();
+
 		final int ridingEntitiesCount = packet.readInt();
 		for (int i = 0; i < ridingEntitiesCount; i++) {
 			ridingEntities.add(packet.readUUID());
@@ -148,6 +168,8 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		messagePacker.packString(KEY_IS_DOUBLE_SIDED).packBoolean(isDoubleSided);
 		messagePacker.packString(KEY_LIFT_STYLE).packString(liftStyle.toString());
 		messagePacker.packString(KEY_FACING).packInt(Math.round(facing.toYRot()));
+		messagePacker.packString(KEY_ACCELERATION).packFloat(acceleration);
+		messagePacker.packString(KEY_MAX_SPEED).packFloat(maxSpeed);
 		final BlockPos closestFloor = getCurrentFloorBlockPos();
 		messagePacker.packString(KEY_CURRENT_POSITION_X).packDouble(closestFloor.getX());
 		messagePacker.packString(KEY_CURRENT_POSITION_Y).packDouble(closestFloor.getY());
@@ -164,12 +186,13 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 14;
+		return super.messagePackLength() + 16;
 	}
 
 	@Override
 	public void writePacket(FriendlyByteBuf packet) {
 		super.writePacket(packet);
+
 		packet.writeInt(liftHeight);
 		packet.writeInt(liftWidth);
 		packet.writeInt(liftDepth);
@@ -186,6 +209,10 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		packet.writeDouble(speed);
 		packet.writeBoolean(doorOpen);
 		packet.writeFloat(doorValue);
+
+		packet.writeFloat(acceleration);
+		packet.writeFloat(maxSpeed);
+
 		packet.writeInt(ridingEntities.size());
 		ridingEntities.forEach(packet::writeUUID);
 		packet.writeInt(floors.size());
@@ -205,6 +232,9 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 			isDoubleSided = packet.readBoolean();
 			liftStyle = EnumHelper.valueOf(LiftStyle.TRANSPARENT, packet.readUtf(PACKET_STRING_READ_LENGTH));
 			facing = Direction.fromYRot(packet.readInt());
+
+			acceleration = packet.readFloat();
+			maxSpeed = packet.readFloat();
 		} else {
 			super.update(key, packet);
 		}
@@ -294,7 +324,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		if (!doorOpen && doorValue == 0) {
 			liftInstructions.getTargetFloor(targetFloor -> {
 				final double stoppingDistance = Math.abs(targetFloor - currentPositionY);
-				liftDirection = stoppingDistance < Train.ACCELERATION_DEFAULT ? LiftDirection.NONE : targetFloor > currentPositionY ? LiftDirection.UP : LiftDirection.DOWN;
+				liftDirection = stoppingDistance < 0.0001 ? LiftDirection.NONE : targetFloor > currentPositionY ? LiftDirection.UP : LiftDirection.DOWN;
 
 				if (liftDirection == LiftDirection.NONE) {
 					speed = 0;
@@ -309,12 +339,11 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 						}
 					}
 				} else {
-					if (stoppingDistance < 0.5 * speed * speed / Train.ACCELERATION_DEFAULT) {
-						speed = Math.max(speed - 0.5 * speed * speed / stoppingDistance * ticksElapsed, Train.ACCELERATION_DEFAULT);
+					if (stoppingDistance < 0.5 * speed * speed / acceleration) {
+						speed = Math.max(speed - 0.5 * speed * speed / stoppingDistance * ticksElapsed, acceleration);
 					} else {
-						speed = Math.min(speed + Train.ACCELERATION_DEFAULT * ticksElapsed, 1);
+						speed = Math.min(speed + acceleration * ticksElapsed, maxSpeed);
 					}
-
 					currentPositionY += speed * liftDirection.speedMultiplier * ticksElapsed;
 				}
 			});

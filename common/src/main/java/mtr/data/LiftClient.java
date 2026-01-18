@@ -71,6 +71,8 @@ public class LiftClient extends Lift {
 		currentPositionZ = lift.currentPositionZ;
 		liftDirection = lift.liftDirection;
 		speed = lift.speed;
+		acceleration = lift.acceleration;
+		maxSpeed = lift.maxSpeed;
 		doorOpen = lift.doorOpen;
 		doorValue = lift.doorValue;
 		frontCanOpen = lift.frontCanOpen;
@@ -98,6 +100,10 @@ public class LiftClient extends Lift {
 		packet.writeBoolean(isDoubleSided);
 		packet.writeUtf(liftStyle.toString());
 		packet.writeInt(Math.round(facing.toYRot()));
+
+		packet.writeFloat(acceleration);
+		packet.writeFloat(maxSpeed);
+
 		sendPacket.accept(packet);
 	}
 
