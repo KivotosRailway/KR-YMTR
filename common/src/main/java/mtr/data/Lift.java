@@ -324,7 +324,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		if (!doorOpen && doorValue == 0) {
 			liftInstructions.getTargetFloor(targetFloor -> {
 				final double stoppingDistance = Math.abs(targetFloor - currentPositionY);
-				liftDirection = stoppingDistance < 0.0001 ? LiftDirection.NONE : targetFloor > currentPositionY ? LiftDirection.UP : LiftDirection.DOWN;
+				liftDirection = stoppingDistance < 0.005 ? LiftDirection.NONE : targetFloor > currentPositionY ? LiftDirection.UP : LiftDirection.DOWN;
 
 				if (liftDirection == LiftDirection.NONE) {
 					speed = 0;
