@@ -36,8 +36,8 @@ public class LiftServer extends Lift {
 
 		final int ridingEntitiesCount = ridingEntities.size();
 
-		double safeWidth = Math.max(liftWidth - 1, 1);
-		double safeDepth = Math.max(liftDepth - 1, 1);
+		double safeWidth = Math.max(liftWidth - 1, 2);
+		double safeDepth = Math.max(liftDepth - 1, 2);
 
 		VehicleRidingServer.mountRider(world, ridingEntities, id, 1,
 				currentPositionX + liftOffsetX / 2F,

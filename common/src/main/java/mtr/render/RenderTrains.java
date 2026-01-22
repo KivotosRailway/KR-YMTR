@@ -66,7 +66,8 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	private static final int TOTAL_RENDER_STAGES = 2;
 	private static final List<List<Map<ResourceLocation, Set<BiConsumer<PoseStack, VertexConsumer>>>>> RENDERS = new ArrayList<>(TOTAL_RENDER_STAGES);
 	private static final List<List<Map<ResourceLocation, Set<BiConsumer<PoseStack, VertexConsumer>>>>> CURRENT_RENDERS = new ArrayList<>(TOTAL_RENDER_STAGES);
-	private static final ResourceLocation LIFT_TEXTURE = new ResourceLocation("mtr:textures/entity/lift_1.png");
+	private static final ResourceLocation LIFT_TEXTURE_1 = new ResourceLocation("mtr:textures/entity/lift_1.png");
+	private static final ResourceLocation LIFT_TEXTURE_2 = new ResourceLocation("mtr:textures/entity/lift_2.png");
 	private static final ResourceLocation ARROW_TEXTURE = new ResourceLocation("mtr:textures/block/sign/lift_arrow.png");
 
 	static {
@@ -245,8 +246,11 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 			UtilitiesClient.rotateXDegrees(matrices, 180);
 			UtilitiesClient.rotateYDegrees(matrices, 180 + lift.facing.toYRot());
 			final int light = LightTexture.pack(world.getBrightness(LightLayer.BLOCK, posAverage), world.getBrightness(LightLayer.SKY, posAverage));
-			new ModelLift1(lift.liftHeight, lift.liftWidth, lift.liftDepth, lift.isDoubleSided).render(matrices, vertexConsumers, lift, LIFT_TEXTURE, light, frontDoorValue, backDoorValue, false, 0, 1, false, true, false, false, false);
-
+			if (lift.liftStyle == Lift.LiftStyle.TRANSPARENT){
+				new ModelLift1(lift.liftHeight, lift.liftWidth, lift.liftDepth, lift.isDoubleSided).render(matrices, vertexConsumers, lift, LIFT_TEXTURE_1, light, frontDoorValue, backDoorValue, false, 0, 1, false, true, false, false, false);
+			} else {
+				new ModelLift1(lift.liftHeight, lift.liftWidth, lift.liftDepth, lift.isDoubleSided).render(matrices, vertexConsumers, lift, LIFT_TEXTURE_2, light, frontDoorValue, backDoorValue, false, 0, 1, false, true, false, false, false);
+			}
 			for (int i = 0; i < (lift.isDoubleSided ? 2 : 1); i++) {
 				UtilitiesClient.rotateYDegrees(matrices, 180);
 				matrices.pushPose();
