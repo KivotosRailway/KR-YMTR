@@ -39,24 +39,18 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 	private final Button buttonAccelerationAdd;
 	private final Button buttonMaxSpeedMinus;
 	private final Button buttonMaxSpeedAdd;
+	private final int width1;
+	private final int width2;
 
-	private final int totalWidth;
-	private final int leftColumnX;
-	private final int rightColumnX;
-	private final int columnWidth;
-
-	private static final int MIN_DIMENSION = 2;
+	private static final int MIN_DIMENSION = 1;
 	private static final int MAX_DIMENSION = 20;
-	private static final int MAX_OFFSET = 64;
+	private static final int MAX_OFFSET = 20;
 	private static final float MIN_ACCELERATION = 0.001F;
 	private static final float MAX_ACCELERATION = 0.05F;
 	private static final float MIN_SPEED = 0.1F;
 	private static final float MAX_SPEED = 1.0F;
 	private static final float ACCELERATION_STEP = 0.001F;
 	private static final float SPEED_STEP = 0.05F;
-
-	private static final int BACKGROUND_COLOR = 0xC8505050;
-	private static final int COLUMN_SPACING = 20;
 
 	public LiftCustomizationScreen(LiftClient lift) {
 		super(Text.literal(""));
@@ -138,63 +132,34 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		buttonRotateClockwise = UtilitiesClient.newButton(rotateClockwiseText, button -> lift.facing = lift.facing.getClockWise());
 
 		font = Minecraft.getInstance().font;
-		int textWidth = Math.max(Math.max(SQUARE_SIZE * 3, font.width(doubleSidedText)),
-				Math.max(font.width(rotateAnticlockwiseText), font.width(rotateClockwiseText))) + TEXT_PADDING * 2;
-
-		columnWidth = textWidth + SQUARE_SIZE * 2;
-		totalWidth = columnWidth * 2 + COLUMN_SPACING + TEXT_PADDING * 2;
-		leftColumnX = TEXT_PADDING;
-		rightColumnX = leftColumnX + columnWidth + COLUMN_SPACING;
+		width1 = Math.max(Math.max(SQUARE_SIZE * 3, font.width(doubleSidedText)), Math.max(font.width(rotateAnticlockwiseText), font.width(rotateClockwiseText))) + TEXT_PADDING * 2;
+		width2 = width1 + SQUARE_SIZE;
 	}
 
 	@Override
 	protected void init() {
 		super.init();
 
-		int row = 0;
-		IDrawing.setPositionAndWidth(buttonHeightMinus, leftColumnX, SQUARE_SIZE * row, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonHeightAdd, leftColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * row, SQUARE_SIZE);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonWidthMinus, leftColumnX, SQUARE_SIZE * row, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonWidthAdd, leftColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * row, SQUARE_SIZE);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonDepthMinus, leftColumnX, SQUARE_SIZE * row, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonDepthAdd, leftColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * row, SQUARE_SIZE);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonOffsetXMinus, leftColumnX, SQUARE_SIZE * row, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonOffsetXAdd, leftColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * row, SQUARE_SIZE);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonOffsetYMinus, leftColumnX, SQUARE_SIZE * row, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonOffsetYAdd, leftColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * row, SQUARE_SIZE);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonOffsetZMinus, leftColumnX, SQUARE_SIZE * row, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonOffsetZAdd, leftColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * row, SQUARE_SIZE);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonIsDoubleSided, leftColumnX, SQUARE_SIZE * row, columnWidth);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonLiftStyle, leftColumnX, SQUARE_SIZE * row, columnWidth);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonRotateAnticlockwise, leftColumnX, SQUARE_SIZE * row, columnWidth);
-		row++;
-
-		IDrawing.setPositionAndWidth(buttonRotateClockwise, leftColumnX, SQUARE_SIZE * row, columnWidth);
-		row++;
-
-		int rightRow = 0;
-		IDrawing.setPositionAndWidth(buttonAccelerationMinus, rightColumnX, SQUARE_SIZE * rightRow, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonAccelerationAdd, rightColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * rightRow, SQUARE_SIZE);
-		rightRow++;
-
-		IDrawing.setPositionAndWidth(buttonMaxSpeedMinus, rightColumnX, SQUARE_SIZE * rightRow, SQUARE_SIZE);
-		IDrawing.setPositionAndWidth(buttonMaxSpeedAdd, rightColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * rightRow, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonHeightMinus, 0, 0, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonHeightAdd, width1, 0, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonWidthMinus, 0, SQUARE_SIZE, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonWidthAdd, width1, SQUARE_SIZE, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonDepthMinus, 0, SQUARE_SIZE * 2, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonDepthAdd, width1, SQUARE_SIZE * 2, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonOffsetXMinus, 0, SQUARE_SIZE * 3, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonOffsetXAdd, width1, SQUARE_SIZE * 3, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonOffsetYMinus, 0, SQUARE_SIZE * 4, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonOffsetYAdd, width1, SQUARE_SIZE * 4, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonOffsetZMinus, 0, SQUARE_SIZE * 5, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonOffsetZAdd, width1, SQUARE_SIZE * 5, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonAccelerationMinus, 0, SQUARE_SIZE * 11, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonAccelerationAdd, width1, SQUARE_SIZE * 11, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonMaxSpeedMinus, 0, SQUARE_SIZE * 12, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonMaxSpeedAdd, width1, SQUARE_SIZE * 12, SQUARE_SIZE);
+		IDrawing.setPositionAndWidth(buttonIsDoubleSided, 0, SQUARE_SIZE * 7, width2);
+		IDrawing.setPositionAndWidth(buttonLiftStyle, 0, SQUARE_SIZE * 8, width2);
+		IDrawing.setPositionAndWidth(buttonRotateAnticlockwise, 0, SQUARE_SIZE * 9, width2);
+		IDrawing.setPositionAndWidth(buttonRotateClockwise, 0, SQUARE_SIZE * 10, width2);
 
 		addDrawableChild(buttonHeightMinus);
 		addDrawableChild(buttonHeightAdd);
@@ -213,7 +178,7 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		addDrawableChild(buttonMaxSpeedMinus);
 		addDrawableChild(buttonMaxSpeedAdd);
 		addDrawableChild(buttonIsDoubleSided);
-        addDrawableChild(buttonLiftStyle);
+//		addDrawableChild(buttonLiftStyle);
 		addDrawableChild(buttonRotateAnticlockwise);
 		addDrawableChild(buttonRotateClockwise);
 		updateControls();
@@ -222,43 +187,16 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
 		try {
-			// 绘制半透明灰色背景
-			guiGraphics.fill(0, 0, totalWidth, height, BACKGROUND_COLOR);
+			guiGraphics.fill(0, 0, width2, height, ARGB_BACKGROUND);
 			super.render(guiGraphics, mouseX, mouseY, delta);
-
-			// 左边列的文字标签
-			int row = 0;
-			guiGraphics.drawCenteredString(font, Text.translatable("tooltip.mtr.rail_action_height", lift.liftHeight / 2F),
-					leftColumnX + columnWidth / 2, SQUARE_SIZE * row + TEXT_PADDING, ARGB_WHITE);
-			row++;
-
-			guiGraphics.drawCenteredString(font, Text.translatable("tooltip.mtr.rail_action_width", lift.liftWidth),
-					leftColumnX + columnWidth / 2, SQUARE_SIZE * row + TEXT_PADDING, ARGB_WHITE);
-			row++;
-
-			guiGraphics.drawCenteredString(font, Text.translatable("tooltip.mtr.rail_action_depth", lift.liftDepth),
-					leftColumnX + columnWidth / 2, SQUARE_SIZE * row + TEXT_PADDING, ARGB_WHITE);
-			row++;
-
-			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_x", lift.liftOffsetX / 2F),
-					leftColumnX + columnWidth / 2, SQUARE_SIZE * row + TEXT_PADDING, ARGB_WHITE);
-			row++;
-
-			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_y", lift.liftOffsetY),
-					leftColumnX + columnWidth / 2, SQUARE_SIZE * row + TEXT_PADDING, ARGB_WHITE);
-			row++;
-
-			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_z", lift.liftOffsetZ / 2F),
-					leftColumnX + columnWidth / 2, SQUARE_SIZE * row + TEXT_PADDING, ARGB_WHITE);
-
-			// 右边列的文字标签
-			int rightRow = 0;
-			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_acceleration", String.format("%.3f", lift.acceleration)),
-					rightColumnX + columnWidth / 2, SQUARE_SIZE * rightRow + TEXT_PADDING, ARGB_WHITE);
-			rightRow++;
-
-			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_max_speed", String.format("%.2f", lift.maxSpeed)),
-					rightColumnX + columnWidth / 2, SQUARE_SIZE * rightRow + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("tooltip.mtr.rail_action_height", lift.liftHeight / 2F), width2 / 2, TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("tooltip.mtr.rail_action_width", lift.liftWidth), width2 / 2, SQUARE_SIZE + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("tooltip.mtr.rail_action_depth", lift.liftDepth), width2 / 2, SQUARE_SIZE * 2 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_x", lift.liftOffsetX / 2F), width2 / 2, SQUARE_SIZE * 3 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_y", lift.liftOffsetY), width2 / 2, SQUARE_SIZE * 4 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.offset_z", lift.liftOffsetZ / 2F), width2 / 2, SQUARE_SIZE * 5 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_acceleration", String.format("%.3f", lift.acceleration)), width2 / 2, SQUARE_SIZE * 11 + TEXT_PADDING, ARGB_WHITE);
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_max_speed", String.format("%.2f", lift.maxSpeed)), width2 / 2, SQUARE_SIZE * 12 + TEXT_PADDING, ARGB_WHITE);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
