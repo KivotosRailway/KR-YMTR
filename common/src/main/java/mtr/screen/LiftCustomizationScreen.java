@@ -42,7 +42,7 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 	private final int width1;
 	private final int width2;
 
-	private static final int MIN_DIMENSION = 1;
+	private static final int MIN_DIMENSION = 2;
 	private static final int MAX_DIMENSION = 20;
 	private static final int MAX_OFFSET = 20;
 	private static final float MIN_ACCELERATION = 0.001F;
