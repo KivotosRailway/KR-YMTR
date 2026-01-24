@@ -35,18 +35,8 @@ public class LiftServer extends Lift {
 		tick(world, 1);
 
 		final int ridingEntitiesCount = ridingEntities.size();
-
-		double safeWidth = Math.max(liftWidth - 1, 2);
-		double safeDepth = Math.max(liftDepth - 1, 2);
-
-		VehicleRidingServer.mountRider(world, ridingEntities, id, 1,
-				currentPositionX + liftOffsetX / 2F,
-				currentPositionY + liftOffsetY,
-				currentPositionZ + liftOffsetZ / 2F,
-				safeDepth,
-				safeWidth,
-				getYaw(), 0, doorValue > 0, true, 0,
-				PACKET_UPDATE_LIFT_PASSENGERS, player -> true, player -> {});
+		VehicleRidingServer.mountRider(world, ridingEntities, id, 1, currentPositionX + liftOffsetX / 2F, currentPositionY + liftOffsetY, currentPositionZ + liftOffsetZ / 2F, liftWidth - 1, liftDepth - 1, getYaw(), 0, doorValue > 0, true, 0, PACKET_UPDATE_LIFT_PASSENGERS, player -> true, player -> {
+		});
 
 		if (liftInstructions.isDirty() || ridingEntitiesCount != ridingEntities.size()) {
 			liftsToSync.add(this);

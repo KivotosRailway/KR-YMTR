@@ -28,6 +28,8 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -43,17 +45,46 @@ public class BlockNode extends BlockDirectionalMapper {
 	public static final BooleanProperty IS_22_5 = BooleanProperty.create("is_22_5");
 	public static final BooleanProperty IS_45 = BooleanProperty.create("is_45");
 	public static final BooleanProperty IS_CONNECTED = BooleanProperty.create("is_connected");
+	public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
 	public BlockNode(TransportMode transportMode) {
 		super(BlockBehaviour.Properties.of().strength(2).noOcclusion());
 		this.transportMode = transportMode;
-		registerDefaultState(defaultBlockState().setValue(FACING, false).setValue(IS_22_5, false).setValue(IS_45, false));
+		registerDefaultState(defaultBlockState()
+				.setValue(FACING, false)
+				.setValue(IS_22_5, false)
+				.setValue(IS_45, false)
+				.setValue(IS_CONNECTED, false)
+				.setValue(WATERLOGGED, false));
 	}
 
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext ctx) {
 		final int quadrant = RailAngle.getQuadrant(ctx.getRotation(), true);
-		return defaultBlockState().setValue(FACING, quadrant % 8 >= 4).setValue(IS_45, quadrant % 4 >= 2).setValue(IS_22_5, quadrant % 2 >= 1).setValue(IS_CONNECTED, false);
+		final BlockPos pos = ctx.getClickedPos();
+		final FluidState fluidState = ctx.getLevel().getFluidState(pos);
+
+		return defaultBlockState()
+				.setValue(FACING, quadrant % 8 >= 4)
+				.setValue(IS_45, quadrant % 4 >= 2)
+				.setValue(IS_22_5, quadrant % 2 >= 1)
+				.setValue(IS_CONNECTED, false)
+				.setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER);
+	}
+
+	@Override
+	public FluidState getFluidState(BlockState state) {
+		return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
+	}
+
+	@Override
+	public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+								  LevelAccessor world, BlockPos pos, BlockPos neighborPos) {
+		if (state.getValue(WATERLOGGED)) {
+			world.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(world));
+		}
+
+		return super.updateShape(state, direction, neighborState, world, pos, neighborPos);
 	}
 
 	@Override
@@ -79,7 +110,7 @@ public class BlockNode extends BlockDirectionalMapper {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(FACING, IS_22_5, IS_45, IS_CONNECTED);
+		builder.add(FACING, IS_22_5, IS_45, IS_CONNECTED, WATERLOGGED);
 	}
 
 	public static void resetRailNode(Level world, BlockPos pos) {
@@ -90,7 +121,9 @@ public class BlockNode extends BlockDirectionalMapper {
 	}
 
 	public static float getAngle(BlockState state) {
-		return (IBlock.getStatePropertySafe(state, BlockNode.FACING) ? 0 : 90) + (IBlock.getStatePropertySafe(state, BlockNode.IS_22_5) ? 22.5F : 0) + (IBlock.getStatePropertySafe(state, BlockNode.IS_45) ? 45 : 0);
+		return (IBlock.getStatePropertySafe(state, BlockNode.FACING) ? 0 : 90)
+				+ (IBlock.getStatePropertySafe(state, BlockNode.IS_22_5) ? 22.5F : 0)
+				+ (IBlock.getStatePropertySafe(state, BlockNode.IS_45) ? 45 : 0);
 	}
 
 	public static class BlockBoatNode extends BlockNode implements EntityBlockMapper {
@@ -100,8 +133,26 @@ public class BlockNode extends BlockDirectionalMapper {
 		}
 
 		@Override
-		public BlockState updateShape(BlockState state, Direction direction, BlockState newState, LevelAccessor world, BlockPos pos, BlockPos posFrom) {
+		public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+			final int quadrant = RailAngle.getQuadrant(ctx.getRotation(), true);
+			final BlockPos pos = ctx.getClickedPos();
+			final FluidState fluidState = ctx.getLevel().getFluidState(pos);
+
+			return defaultBlockState()
+					.setValue(FACING, quadrant % 8 >= 4)
+					.setValue(IS_45, quadrant % 4 >= 2)
+					.setValue(IS_22_5, quadrant % 2 >= 1)
+					.setValue(IS_CONNECTED, false)
+					.setValue(WATERLOGGED, false);
+		}
+
+		@Override
+		public BlockState updateShape(BlockState state, Direction direction, BlockState newState,
+									  LevelAccessor world, BlockPos pos, BlockPos posFrom) {
 			if (state.canSurvive(world, pos)) {
+				if (state.getValue(WATERLOGGED)) {
+					world.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(world));
+				}
 				return state;
 			} else {
 				return Blocks.AIR.defaultBlockState();
@@ -111,12 +162,19 @@ public class BlockNode extends BlockDirectionalMapper {
 		@Override
 		public boolean canSurvive(BlockState state, LevelReader world, BlockPos pos) {
 			final BlockPos posBelow = pos.below();
-			return (world.getFluidState(posBelow).getType() != Fluids.EMPTY || world.getBlockState(posBelow).is(Blocks.ICE)) && world.getFluidState(pos).getType() == Fluids.EMPTY;
+			return (world.getFluidState(posBelow).getType() != Fluids.EMPTY
+					|| world.getBlockState(posBelow).is(Blocks.ICE))
+					&& world.getFluidState(pos).getType() == Fluids.EMPTY;
 		}
 
 		@Override
 		public BlockEntityMapper createBlockEntity(BlockPos pos, BlockState state) {
 			return new TileEntityBoatNode(pos, state);
+		}
+
+		@Override
+		public FluidState getFluidState(BlockState state) {
+			return Fluids.EMPTY.defaultFluidState();
 		}
 	}
 
@@ -141,7 +199,15 @@ public class BlockNode extends BlockDirectionalMapper {
 		@Override
 		public BlockState getStateForPlacement(BlockPlaceContext ctx) {
 			final int quadrant = RailAngle.getQuadrant(ctx.getRotation(), false);
-			return defaultBlockState().setValue(FACING, quadrant % 4 >= 2).setValue(IS_45, quadrant % 2 >= 1).setValue(IS_22_5, false).setValue(IS_CONNECTED, false);
+			final BlockPos pos = ctx.getClickedPos();
+			final FluidState fluidState = ctx.getLevel().getFluidState(pos);
+
+			return defaultBlockState()
+					.setValue(FACING, quadrant % 4 >= 2)
+					.setValue(IS_45, quadrant % 2 >= 1)
+					.setValue(IS_22_5, false)
+					.setValue(IS_CONNECTED, false)
+					.setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER);
 		}
 
 		@Override
