@@ -318,7 +318,7 @@ task dummyForgeOutput(type: DummyArchiveTask) {
 	// Forgix's mergeJars task doesn't extend AbstractArchiveTask.
 	// This is to make github.com/teaconmc/longjing happy.
 	destinationDirectory = file("build/release/")
-	archiveBaseName = "MTR-forge"
+	archiveBaseName = "YMTR-forge"
 	archiveVersion = minecraft_version + "-" + rootProject.mod_version
 	archiveExtension = "jar"
 }
