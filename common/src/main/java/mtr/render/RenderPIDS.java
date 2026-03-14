@@ -436,7 +436,9 @@ public class RenderPIDS<T extends BlockEntityMapper> extends BlockEntityRenderer
 							}
 							textRenderer.drawInBatch(arrivalText, 0, 0, textColor, false, matrices.last().pose(), vertexConsumers, Font.DisplayMode.NORMAL, 0, 0xF000F0);
 							RenderSystem.disableDepthTest();
-							((MultiBufferSource.BufferSource) vertexConsumers).endBatch();
+							if (vertexConsumers instanceof MultiBufferSource.BufferSource) {
+								((MultiBufferSource.BufferSource) vertexConsumers).endBatch();
+							}
 							RenderSystem.enableDepthTest();
 							textRenderer.drawInBatch(arrivalText, 0, 0, textColor, false, matrices.last().pose(), vertexConsumers, Font.DisplayMode.NORMAL, 0, 0xF000F0);
 							matrixStackHolder.pop();
@@ -445,7 +447,8 @@ public class RenderPIDS<T extends BlockEntityMapper> extends BlockEntityRenderer
 					matrixStackHolder.pop();
 				}
 			}
-		} catch (Exception ignored) {
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
 		matrixStackHolder.popAll();
