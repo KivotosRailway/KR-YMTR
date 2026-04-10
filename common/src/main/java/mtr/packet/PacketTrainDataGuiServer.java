@@ -95,10 +95,10 @@ public class PacketTrainDataGuiServer extends PacketTrainDataBase {
 		Registry.sendToPlayer(player, PACKET_OPEN_RESOURCE_PACK_CREATOR_SCREEN, packet);
 	}
 
-	public static void announceS2C(ServerPlayer player, String message, ResourceLocation soundId) {
+	public static void announceS2C(ServerPlayer player, String message, String soundIdString) {
 		final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
 		packet.writeUtf(message);
-		packet.writeUtf(soundId == null ? "" : soundId.toString());
+		packet.writeUtf(soundIdString == null ? "" : soundIdString);
 		Registry.sendToPlayer(player, PACKET_ANNOUNCE, packet);
 	}
 

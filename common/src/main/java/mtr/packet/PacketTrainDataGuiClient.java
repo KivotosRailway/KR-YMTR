@@ -24,6 +24,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import mtr.client.NetworkAudioPlayer;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -168,8 +169,18 @@ public class PacketTrainDataGuiClient extends PacketTrainDataBase {
 			IDrawing.narrateOrAnnounce(message);
 			final ClientLevel world = minecraftClient.level;
 			final LocalPlayer player = minecraftClient.player;
-			if (!soundIdString.isEmpty() && world != null && player != null) {
-				world.playLocalSound(player.blockPosition(), RegistryUtilities.createSoundEvent(new ResourceLocation(soundIdString)), SoundSource.BLOCKS, 1000000, 1, false);
+			if (soundIdString.isEmpty() || world == null || player == null) {
+				return;
+			}
+
+			if (soundIdString.startsWith("http://") || soundIdString.startsWith("https://")) {
+				NetworkAudioPlayer.playAsync(soundIdString, () -> {
+					System.err.println("Failed to play network audio: " + soundIdString);
+				});
+			} else {
+				world.playLocalSound(player.blockPosition(),
+						RegistryUtilities.createSoundEvent(new ResourceLocation(soundIdString)),
+						SoundSource.BLOCKS, 1000000, 1, false);
 			}
 		});
 	}
