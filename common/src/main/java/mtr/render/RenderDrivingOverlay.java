@@ -19,6 +19,9 @@ public class RenderDrivingOverlay implements IGui {
 	private static String lastStation;
 	private static int coolDown;
 
+	private static boolean isAutoBraking;
+	private static String distanceToStopText;
+
 	private static final int HOT_BAR_WIDTH = 182;
 	private static final int HOT_BAR_HEIGHT = 22;
 
@@ -62,6 +65,15 @@ public class RenderDrivingOverlay implements IGui {
 
 		final String speedText = RailwayData.round(speed * 3.6F, 1) + " km/h";
 		guiGraphics.drawString(client.font, speedText, startX - client.font.width(speedText) - TEXT_PADDING, (int) (window.getGuiScaledHeight() - 14.5F), ARGB_WHITE, true);
+
+		if (distanceToStopText != null && !distanceToStopText.isEmpty()) {
+			guiGraphics.drawString(client.font, distanceToStopText,
+					startX + HOT_BAR_WIDTH + TEXT_PADDING,
+					(int) (window.getGuiScaledHeight() - 54.5F),
+					ARGB_WHITE, true);
+		}
+
+
 		if (thisStation != null) {
 			guiGraphics.drawString(client.font, thisStation, startX + HOT_BAR_WIDTH + TEXT_PADDING, (int) (window.getGuiScaledHeight() - 44.5F), ARGB_WHITE, true);
 		}
@@ -84,6 +96,14 @@ public class RenderDrivingOverlay implements IGui {
 		RenderDrivingOverlay.doorValue = trainClient.getDoorValue();
 		coolDown = 2;
 		RenderDrivingOverlay.speed = trainClient.getSpeed() * 20;
+
+		double distance = trainClient.getDistanceToNextStop();
+		if (distance >= 0) {
+			distanceToStopText = RailwayData.round(distance, 1) + " m";
+		} else {
+			distanceToStopText = "";
+		}
+
 		final Route thisRoute = trainClient.getThisRoute();
 		final Route nextRoute = trainClient.getNextRoute();
 		final Station thisStation = trainClient.getThisStation();

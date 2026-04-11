@@ -343,6 +343,13 @@ public class TrainClient extends Train implements IGui {
 		return lastStation;
 	}
 
+	public double getDistanceToNextStop() {
+		if (!isOnRoute || nextStoppingIndex >= distances.size()) {
+			return -1;
+		}
+		return distances.get(nextStoppingIndex) - railProgress;
+	}
+
 	public void startRidingClient(UUID uuid, float percentageX, float percentageZ) {
 		final LocalPlayer player = Minecraft.getInstance().player;
 		if (player != null && player.getUUID().equals(uuid)) {
