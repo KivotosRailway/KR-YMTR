@@ -6,112 +6,238 @@ import mtr.data.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 public class RenderDrivingOverlay implements IGui {
 
-	private static int accelerationSign;
-	private static float doorValue;
-	private static float speed;
-	private static String thisStation;
-	private static String nextStation;
-	private static String thisRoute;
-	private static String lastStation;
+	private static TrainClient trainClient;
 	private static int coolDown;
 
-	private static boolean isAutoBraking;
-	private static String distanceToStopText;
+	private static final int EDGE_PADDING = 16;
+	private static final int TOOL_SIZE = 96;
+	private static final int RADIUS = TOOL_SIZE / 2;
+	private static final int SPEEDOMETER_START_ANGLE = -60;
+	private static final int SPEEDOMETER_SPAN = 300;
+	private static final int SPEEDOMETER_TICK_INTERVAL = 5;
 
-	private static final int HOT_BAR_WIDTH = 182;
-	private static final int HOT_BAR_HEIGHT = 22;
+	private static final int PLATFORM_BAR_WIDTH = 6;
+	private static final int PLATFORM_BAR_HEIGHT = 120;
+	private static final int PLATFORM_BAR_OFFSET_Y = 20;
+	private static final int TEXT_PADDING = 4;
+
+	private static final int BLUE_COLOR = 0xFFAACCFF;
+	private static final int ORANGE_COLOR = 0xFFFF9900;
+	private static final int GREEN_COLOR = 0xFF00FF00;
+	private static final int RED_COLOR = 0xFFFF0000;
+	private static final int DARK_GRAY = 0xFF333333;
+	private static final int LIGHT_GRAY = 0xFFAAAAAA;
 
 	public static void render(GuiGraphics guiGraphics) {
-		if (coolDown > 0) {
-			coolDown--;
-		} else {
-			return;
-		}
-
 		final Minecraft client = Minecraft.getInstance();
 		final LocalPlayer player = client.player;
-		final Window window = client.getWindow();
-		if (window == null || player == null) {
+		if (player == null || trainClient == null || coolDown <= 0) {
+			return;
+		}
+		coolDown--;
+
+		if (!Train.isHoldingKey(player) || !trainClient.isPlayerRiding(player)) {
 			return;
 		}
 
-		guiGraphics.pose().pushPose();
+		final Window window = client.getWindow();
+		if (window == null) return;
+
+		final int screenWidth = window.getGuiScaledWidth();
+		final int screenHeight = window.getGuiScaledHeight();
+
+		renderPlatformBar(guiGraphics, client, screenWidth, screenHeight);
+		renderSpeedometer(guiGraphics, client, screenWidth, screenHeight);
+		renderStationInfo(guiGraphics, client, screenWidth, screenHeight);
+	}
+
+	private static void renderPlatformBar(GuiGraphics guiGraphics, Minecraft client, int screenWidth, int screenHeight) {
+		final double distanceToStop = trainClient.getDistanceToNextStop();
+		if (distanceToStop < 0) return;
+
+		final int barX = EDGE_PADDING;
+		final int barY = screenHeight / 2 - PLATFORM_BAR_HEIGHT / 2;
+
+		guiGraphics.fill(barX, barY, barX + PLATFORM_BAR_WIDTH, barY + PLATFORM_BAR_HEIGHT, 0x80000000);
+
+		final double maxDisplayDistance = 500.0;
+		final double clampedDistance = Mth.clamp(distanceToStop, 0, maxDisplayDistance);
+		final int indicatorY = barY + (int) ((clampedDistance / maxDisplayDistance) * PLATFORM_BAR_HEIGHT);
+
+		guiGraphics.fill(barX - 1, indicatorY, barX + PLATFORM_BAR_WIDTH + 1, indicatorY + 1, RED_COLOR);
+
+		final String distanceText = RailwayData.round(distanceToStop, 1) + " m";
+		final int textWidth = client.font.width(distanceText);
+		final int textX = barX + PLATFORM_BAR_WIDTH + TEXT_PADDING;
+		final int textY = indicatorY - client.font.lineHeight / 2;
+		guiGraphics.drawString(client.font, distanceText, textX, textY, ARGB_WHITE, true);
+	}
+
+	private static void renderSpeedometer(GuiGraphics guiGraphics, Minecraft client, int screenWidth, int screenHeight) {
+		final int centerX = screenWidth - RADIUS - EDGE_PADDING;
+		final int centerY = screenHeight - RADIUS - EDGE_PADDING;
+
+		final var matrixStack = guiGraphics.pose();
+		matrixStack.pushPose();
+		matrixStack.translate(centerX, centerY, 0);
+
+		final float speed = trainClient.getSpeed();
+		final double speedKmh = speed * 20 * 3.6;
+		final float doorValue = trainClient.getDoorValue();
+		final int manualNotch = trainClient.getManualNotch();
+		final boolean isManual = trainClient.isCurrentlyManual();
+		final int maxSpeedKmh = trainClient.getMaxManualSpeedKmh();
+
 		RenderSystem.enableBlend();
-		final ResourceLocation resourceLocation = new ResourceLocation("textures/gui/widgets.png");
-		final int startX = (window.getGuiScaledWidth() - HOT_BAR_WIDTH) / 2;
-		final int startY = window.getGuiScaledHeight() - (player.isCreative() ? 47 : 63);
+		drawFilledCircle(guiGraphics, 0, 0, RADIUS, 0xFF222222);
+		drawCircleBorder(guiGraphics, 0, 0, RADIUS, 1, 0xFFAAAAAA);
 
-		guiGraphics.blit(resourceLocation, startX, startY, 0, 0, 0, 61, HOT_BAR_HEIGHT, 256, 256);
-		guiGraphics.blit(resourceLocation, startX + 61, startY, 0, 141, 0, 41, HOT_BAR_HEIGHT, 256, 256);
-		guiGraphics.blit(resourceLocation, startX + 120, startY, 0, 0, 0, 21, HOT_BAR_HEIGHT, 256, 256);
-		guiGraphics.blit(resourceLocation, startX + 141, startY, 0, 141, 0, 41, HOT_BAR_HEIGHT, 256, 256);
-
-		guiGraphics.blit(resourceLocation, startX + 39 + Math.max(accelerationSign, -2) * 20, startY - 1, 0, 0, 22, 24, 24, 256, 256);
-		guiGraphics.blit(resourceLocation, startX + (doorValue > 0 ? doorValue < 1 ? 139 : 159 : 119), startY - 1, 0, 0, 22, 24, 24, 256, 256);
-
-		guiGraphics.drawString(client.font, "B2", (int) (startX + 5.5F), (int) (startY + 7.5F), doorValue == 0 && accelerationSign == -2 ? ARGB_WHITE : ARGB_GRAY, true);
-		guiGraphics.drawString(client.font, "B1", (int) (startX + 25.5F), (int) (startY + 7.5F), doorValue == 0 && accelerationSign == -1 ? ARGB_WHITE : ARGB_GRAY, true);
-		guiGraphics.drawString(client.font, "N", (int) (startX + 48.5F), (int) (startY + 7.5F), doorValue == 0 && accelerationSign == 0 ? ARGB_WHITE : ARGB_GRAY, true);
-		guiGraphics.drawString(client.font, "P1", (int) (startX + 65.5F), (int) (startY + 7.5F), doorValue == 0 && accelerationSign == 1 ? ARGB_WHITE : ARGB_GRAY, true);
-		guiGraphics.drawString(client.font, "P2", (int) (startX + 85.5F), (int) (startY + 7.5F), doorValue == 0 && accelerationSign == 2 ? ARGB_WHITE : ARGB_GRAY, true);
-
-		guiGraphics.drawString(client.font, "DC", (int) (startX + 125.5F), (int) (startY + 7.5F), speed == 0 && doorValue == 0 ? ARGB_WHITE : ARGB_GRAY, true);
-		guiGraphics.drawString(client.font, String.valueOf(Math.round(doorValue * 10) / 10F), (int) (startX + 144.5F), (int) (startY + 7.5F), doorValue > 0 && doorValue < 1 ? ARGB_WHITE : ARGB_GRAY, true);
-		guiGraphics.drawString(client.font, "DO", (int) (startX + 165.5F), (int) (startY + 7.5F), speed == 0 && doorValue == 1 ? ARGB_WHITE : ARGB_GRAY, true);
-
-		final String speedText = RailwayData.round(speed * 3.6F, 1) + " km/h";
-		guiGraphics.drawString(client.font, speedText, startX - client.font.width(speedText) - TEXT_PADDING, (int) (window.getGuiScaledHeight() - 14.5F), ARGB_WHITE, true);
-
-		if (distanceToStopText != null && !distanceToStopText.isEmpty()) {
-			guiGraphics.drawString(client.font, distanceToStopText,
-					startX + HOT_BAR_WIDTH + TEXT_PADDING,
-					(int) (window.getGuiScaledHeight() - 54.5F),
-					ARGB_WHITE, true);
+		matrixStack.pushPose();
+		matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(SPEEDOMETER_START_ANGLE));
+		for (int i = 0; i <= maxSpeedKmh; i += SPEEDOMETER_TICK_INTERVAL) {
+			final boolean isMajor = (i % 20 == 0);
+			final int tickLength = isMajor ? 8 : 4;
+			guiGraphics.fill(-RADIUS + 2, -1, -RADIUS + 2 + tickLength, 1, LIGHT_GRAY);
+			matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees((float) SPEEDOMETER_TICK_INTERVAL * SPEEDOMETER_SPAN / maxSpeedKmh));
 		}
+		matrixStack.popPose();
 
+		matrixStack.pushPose();
+		matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(SPEEDOMETER_START_ANGLE));
+		for (int i = 0; i <= maxSpeedKmh; i += 20) {
+			matrixStack.pushPose();
+			matrixStack.translate(-RADIUS + 12, 0, 0);
+			matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(-SPEEDOMETER_START_ANGLE - (float) i * SPEEDOMETER_SPAN / maxSpeedKmh));
+			matrixStack.scale(0.5F, 0.5F, 1);
+			final String label = String.valueOf(i);
+			final int width = client.font.width(label);
+			guiGraphics.drawString(client.font, label, -width / 2, -4, ARGB_WHITE, false);
+			matrixStack.popPose();
+			matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(20F * SPEEDOMETER_SPAN / maxSpeedKmh));
+		}
+		matrixStack.popPose();
+
+		matrixStack.pushPose();
+		final float needleAngle = SPEEDOMETER_START_ANGLE + (float) speedKmh * SPEEDOMETER_SPAN / maxSpeedKmh;
+		matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(needleAngle));
+		guiGraphics.fill(-RADIUS + 4, -1, 0, 1, RED_COLOR);
+		matrixStack.popPose();
+
+		guiGraphics.fill(-2, -2, 2, 2, 0xFFFFFFFF);
+
+		matrixStack.pushPose();
+		matrixStack.translate(-RADIUS * 0.3, -TOOL_SIZE * 0.1, 0);
+		String notchText;
+		int notchColor;
+		if (manualNotch < -2) {
+			notchText = "EB";
+			notchColor = RED_COLOR;
+		} else if (manualNotch < 0) {
+			notchText = "B" + (-manualNotch);
+			notchColor = ORANGE_COLOR;
+		} else if (manualNotch > 0) {
+			notchText = "P" + manualNotch;
+			notchColor = BLUE_COLOR;
+		} else {
+			notchText = "N";
+			notchColor = ARGB_WHITE;
+		}
+		drawCenteredText(guiGraphics, client, notchText, notchColor);
+		if (manualNotch != 0 && manualNotch >= -2) {
+			matrixStack.translate(0, 8, 0);
+			matrixStack.scale(0.5F, 0.5F, 1);
+			final int powerPercent = Math.abs(manualNotch) * 100 / 2;
+			drawCenteredText(guiGraphics, client, "(" + powerPercent + "%)", notchColor);
+		}
+		matrixStack.popPose();
+
+		matrixStack.pushPose();
+		matrixStack.translate(0, -TOOL_SIZE * 0.25, 0);
+		drawCenteredText(guiGraphics, client, "MANUAL", isManual ? GREEN_COLOR : DARK_GRAY);
+		matrixStack.popPose();
+
+		matrixStack.pushPose();
+		matrixStack.translate(RADIUS * 0.3, -TOOL_SIZE * 0.1, 0);
+		final String doorState = doorValue > 0 ? "DO" : "DC";
+		drawCenteredText(guiGraphics, client, doorState, ARGB_WHITE);
+		matrixStack.translate(0, 8, 0);
+		matrixStack.scale(0.5F, 0.5F, 1);
+		drawCenteredText(guiGraphics, client, "(" + (int) (doorValue * 100) + "%)", ARGB_WHITE);
+		matrixStack.popPose();
+
+		matrixStack.pushPose();
+		matrixStack.translate(0, TOOL_SIZE * 0.1, 0);
+		drawCenteredText(guiGraphics, client, RailwayData.round(speedKmh, 1) + "", ARGB_WHITE);
+		matrixStack.translate(0, 8, 0);
+		matrixStack.scale(0.5F, 0.5F, 1);
+		drawCenteredText(guiGraphics, client, "km/h", ARGB_WHITE);
+		matrixStack.popPose();
+
+		matrixStack.popPose();
+		RenderSystem.disableBlend();
+	}
+
+	private static void renderStationInfo(GuiGraphics guiGraphics, Minecraft client, int screenWidth, int screenHeight) {
+		final String thisStation = trainClient.getThisStation() != null ? IGui.formatStationName(trainClient.getThisStation().name) : null;
+		final String nextStation = trainClient.getNextStation() != null ? IGui.formatStationName(trainClient.getNextStation().name) : null;
+		final String thisRoute = trainClient.getThisRoute() != null ? IGui.formatStationName(trainClient.getThisRoute().name) : null;
+		final String lastStation = trainClient.getLastStation() != null ? IGui.formatStationName(trainClient.getLastStation().name) : null;
+
+		final int barY = screenHeight / 2 - PLATFORM_BAR_HEIGHT / 2;
+		final int barBottomY = barY + PLATFORM_BAR_HEIGHT;
+
+		final int textX = EDGE_PADDING;
+		int textY = barBottomY + TEXT_PADDING * 2;
 
 		if (thisStation != null) {
-			guiGraphics.drawString(client.font, thisStation, startX + HOT_BAR_WIDTH + TEXT_PADDING, (int) (window.getGuiScaledHeight() - 44.5F), ARGB_WHITE, true);
+			guiGraphics.drawString(client.font, thisStation, textX, textY, ARGB_WHITE, true);
+			textY += client.font.lineHeight + 2;
 		}
 		if (nextStation != null) {
-			guiGraphics.drawString(client.font, "> " + nextStation, startX + HOT_BAR_WIDTH + TEXT_PADDING, (int) (window.getGuiScaledHeight() - 34.5F), ARGB_WHITE, true);
+			guiGraphics.drawString(client.font, "> " + nextStation, textX, textY, ARGB_WHITE, true);
+			textY += client.font.lineHeight + 2;
 		}
 		if (thisRoute != null) {
-			guiGraphics.drawString(client.font, thisRoute, startX + HOT_BAR_WIDTH + TEXT_PADDING, (int) (window.getGuiScaledHeight() - 19.5F), ARGB_WHITE, true);
+			guiGraphics.drawString(client.font, thisRoute, textX, textY, ARGB_WHITE, true);
+			textY += client.font.lineHeight + 2;
 		}
 		if (lastStation != null) {
-			guiGraphics.drawString(client.font, "> " + lastStation, startX + HOT_BAR_WIDTH + TEXT_PADDING, (int) (window.getGuiScaledHeight() - 9.5F), ARGB_WHITE, true);
+			guiGraphics.drawString(client.font, "> " + lastStation, textX, textY, ARGB_WHITE, true);
 		}
-
-		RenderSystem.disableBlend();
-		guiGraphics.pose().popPose();
 	}
 
 	public static void setData(int accelerationSign, TrainClient trainClient) {
-		RenderDrivingOverlay.accelerationSign = accelerationSign;
-		RenderDrivingOverlay.doorValue = trainClient.getDoorValue();
+		RenderDrivingOverlay.trainClient = trainClient;
 		coolDown = 2;
-		RenderDrivingOverlay.speed = trainClient.getSpeed() * 20;
+	}
 
-		double distance = trainClient.getDistanceToNextStop();
-		if (distance >= 0) {
-			distanceToStopText = RailwayData.round(distance, 1) + " m";
-		} else {
-			distanceToStopText = "";
+	private static void drawCenteredText(GuiGraphics guiGraphics, Minecraft client, String text, int color) {
+		final int width = client.font.width(text);
+		guiGraphics.drawString(client.font, text, -width / 2, -client.font.lineHeight / 2, color, false);
+	}
+
+	private static void drawFilledCircle(GuiGraphics guiGraphics, int centerX, int centerY, int radius, int color) {
+		final int r2 = radius * radius;
+		for (int y = -radius; y <= radius; y++) {
+			final int xLimit = (int) Math.sqrt(r2 - y * y);
+			guiGraphics.fill(centerX - xLimit, centerY + y, centerX + xLimit, centerY + y + 1, color);
 		}
+	}
 
-		final Route thisRoute = trainClient.getThisRoute();
-		final Route nextRoute = trainClient.getNextRoute();
-		final Station thisStation = trainClient.getThisStation();
-		final Station nextStation = trainClient.getNextStation();
-		final Station lastStation = trainClient.getLastStation();
-		RenderDrivingOverlay.thisStation = thisStation == null ? null : IGui.formatStationName(thisStation.name);
-		RenderDrivingOverlay.nextStation = nextStation == null ? nextRoute == null ? null : IGui.formatStationName(nextRoute.name) : IGui.formatStationName(nextStation.name);
-		RenderDrivingOverlay.thisRoute = thisRoute == null ? null : IGui.formatStationName(thisRoute.name);
-		RenderDrivingOverlay.lastStation = lastStation == null ? null : IGui.formatStationName(lastStation.name);
+	private static void drawCircleBorder(GuiGraphics guiGraphics, int centerX, int centerY, int radius, int thickness, int color) {
+		final int r2Outer = (radius + thickness) * (radius + thickness);
+		final int r2Inner = (radius - thickness) * (radius - thickness);
+		for (int y = -radius - thickness; y <= radius + thickness; y++) {
+			for (int x = -radius - thickness; x <= radius + thickness; x++) {
+				final int dist2 = x * x + y * y;
+				if (dist2 >= r2Inner && dist2 <= r2Outer) {
+					guiGraphics.fill(centerX + x, centerY + y, centerX + x + 1, centerY + y + 1, color);
+				}
+			}
+		}
 	}
 }

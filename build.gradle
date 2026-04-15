@@ -18,11 +18,11 @@ boolean parchment_not_avail = false
 String parchment_version = parchment_not_avail ? "N/A" : new XmlSlurper().parse("https://ldtteam.jfrog.io/artifactory/parchmentmc-internal/org/parchmentmc/data/parchment-${minecraft_version}/maven-metadata.xml").versioning.release
 def testServer = rootProject.properties.containsKey("testServer") ? rootProject.getProperties().get("testServer").toString() : ""
 
-rootProject.ext.fabric_loader_version = [minecraft_version, getJson("https://meta.fabricmc.net/v2/versions/loader/" + minecraft_version)[0]["loader"]["version"]]
-rootProject.ext.forge_version = minecraft_version + "-" + getJson("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json")["promos"][minecraft_version + "-recommended"]
-rootProject.ext.fabric_api_data = getModrinthData("fabric", minecraft_version, "fabric-api")
-rootProject.ext.mod_menu_data = getModrinthData("fabric", minecraft_version, "modmenu")
-rootProject.ext.architectury_data = getModrinthData("forge", minecraft_version, "architectury-api")
+rootProject.ext.fabric_loader_version = ["1.20.1", "0.19.1"]
+rootProject.ext.forge_version = "1.20.1-47.4.10"
+rootProject.ext.fabric_api_data = ["0.92.7+1.20.1", ""]
+rootProject.ext.mod_menu_data = ["7.2.2", ""]
+rootProject.ext.architectury_data = ["9.2.14", ""]
 
 rootProject.ext.architectury_id = minecraft_main_version == 16 ? "me.shedaniel" : "dev.architectury"
 rootProject.ext.variation = rootProject.properties.containsKey("variation") ? rootProject.getProperties().get("variation").toString() : "normal"

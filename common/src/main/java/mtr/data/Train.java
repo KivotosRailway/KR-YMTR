@@ -477,7 +477,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						if (totalDwellTicks == 0) {
 							tempDoorOpen = false;
 						} else {
-							if (elapsedDwellTicks == 0 && isRepeat() && getIndex(railProgress, false) >= repeatIndex2 && distances.size() > repeatIndex1) {
+							if (speed <= 0 && elapsedDwellTicks == 0 && isRepeat() && getIndex(railProgress, false) >= repeatIndex2 && distances.size() > repeatIndex1) {
 								if (path.get(repeatIndex2).isOppositeRail(path.get(repeatIndex1))) {
 									railProgress = distances.get(repeatIndex1 - 1) + trainCars * spacing;
 									reversed = !reversed;
@@ -510,7 +510,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						}
 
 						final double stoppingDistance = distances.get(nextStoppingIndex) - railProgress;
-						if (!transportMode.continuousMovement && stoppingDistance < 0.5 * speed * speed / accelerationConstant) {
+						boolean isManualOverride = isCurrentlyManual && isStoppingAtPlatform();
+						if (!transportMode.continuousMovement && !isManualOverride && stoppingDistance < 0.5 * speed * speed / accelerationConstant) {
 							speed = stoppingDistance <= 0 ? Train.ACCELERATION_DEFAULT : (float) Math.max(speed - (0.5 * speed * speed / stoppingDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
 							manualNotch = -3;
 						} else {
@@ -537,12 +538,12 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 					}
 
 					railProgress += speed * ticksElapsed;
-					if (!transportMode.continuousMovement && railProgress > distances.get(nextStoppingIndex)) {
+					boolean isManualOverride = isCurrentlyManual && isStoppingAtPlatform();
+					if (!transportMode.continuousMovement && !isManualOverride && railProgress > distances.get(nextStoppingIndex)) {
 						railProgress = distances.get(nextStoppingIndex);
 						speed = 0;
 						manualNotch = -2;
 					}
-
 					tempDoorValue = Mth.clamp(doorValue + ticksElapsed * (doorTarget ? 1 : -1) / DOOR_MOVE_TIME, 0, 1);
 				}
 			}
@@ -703,6 +704,10 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		} else {
 			return null;
 		}
+	}
+
+	protected boolean isStoppingAtPlatform() {
+		return nextStoppingIndex < path.size() && path.get(nextStoppingIndex).rail.railType == RailType.PLATFORM;
 	}
 
 	@FunctionalInterface

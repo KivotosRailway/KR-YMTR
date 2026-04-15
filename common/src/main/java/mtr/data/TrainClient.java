@@ -343,11 +343,25 @@ public class TrainClient extends Train implements IGui {
 		return lastStation;
 	}
 
+	public int getManualNotch() {
+		return manualNotch;
+	}
+
+	public int getMaxManualSpeedKmh() {
+		RailType railType = Train.convertMaxManualSpeed(maxManualSpeed);
+		return railType != null ? (int) (railType.maxBlocksPerTick * 20 * 3.6) : 300;
+	}
+
 	public double getDistanceToNextStop() {
-		if (!isOnRoute || nextStoppingIndex >= distances.size()) {
+		if (!isOnRoute || distances.isEmpty() || path.isEmpty()) {
 			return -1;
 		}
-		return distances.get(nextStoppingIndex) - railProgress;
+		for (int i = 0; i < distances.size(); i++) {
+			if (distances.get(i) > railProgress && path.get(i).rail.railType == RailType.PLATFORM) {
+				return distances.get(i) - railProgress;
+			}
+		}
+		return -1;
 	}
 
 	public void startRidingClient(UUID uuid, float percentageX, float percentageZ) {
