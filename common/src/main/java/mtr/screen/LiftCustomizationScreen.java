@@ -39,6 +39,7 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 	private final Button buttonAccelerationAdd;
 	private final Button buttonMaxSpeedMinus;
 	private final Button buttonMaxSpeedAdd;
+	private final Button buttonDisplayColor;
 
 	private final int totalWidth;
 	private final int leftColumnX;
@@ -126,6 +127,10 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 			lift.maxSpeed = Math.min(MAX_SPEED, lift.maxSpeed + SPEED_STEP);
 			updateControls();
 		});
+		buttonDisplayColor = UtilitiesClient.newButton(Text.literal(""), button -> {
+			lift.displayColor = Lift.DisplayColor.values()[(lift.displayColor.ordinal() + 1) % Lift.DisplayColor.values().length];
+			updateControls();
+		});
 		final Component doubleSidedText = Text.translatable("gui.mtr.lift_is_double_sided");
 		final Component rotateAnticlockwiseText = Text.translatable("gui.mtr.rotate_anticlockwise");
 		final Component rotateClockwiseText = Text.translatable("gui.mtr.rotate_clockwise");
@@ -186,7 +191,6 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		row++;
 
 		IDrawing.setPositionAndWidth(buttonRotateClockwise, leftColumnX, SQUARE_SIZE * row, columnWidth);
-		row++;
 
 		int rightRow = 0;
 		IDrawing.setPositionAndWidth(buttonAccelerationMinus, rightColumnX, SQUARE_SIZE * rightRow, SQUARE_SIZE);
@@ -195,6 +199,8 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 
 		IDrawing.setPositionAndWidth(buttonMaxSpeedMinus, rightColumnX, SQUARE_SIZE * rightRow, SQUARE_SIZE);
 		IDrawing.setPositionAndWidth(buttonMaxSpeedAdd, rightColumnX + columnWidth - SQUARE_SIZE, SQUARE_SIZE * rightRow, SQUARE_SIZE);
+		rightRow++;
+		IDrawing.setPositionAndWidth(buttonDisplayColor, rightColumnX, SQUARE_SIZE * rightRow, columnWidth);
 
 		addDrawableChild(buttonHeightMinus);
 		addDrawableChild(buttonHeightAdd);
@@ -212,6 +218,7 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		addDrawableChild(buttonAccelerationAdd);
 		addDrawableChild(buttonMaxSpeedMinus);
 		addDrawableChild(buttonMaxSpeedAdd);
+		addDrawableChild(buttonDisplayColor);
 		addDrawableChild(buttonIsDoubleSided);
         addDrawableChild(buttonLiftStyle);
 		addDrawableChild(buttonRotateAnticlockwise);
@@ -256,6 +263,9 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 
 			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_max_speed", String.format("%.2f", lift.maxSpeed)),
 					rightColumnX + columnWidth / 2, SQUARE_SIZE * rightRow + TEXT_PADDING, ARGB_WHITE);
+			rightRow++;
+			guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.lift_display_color", Text.translatable("gui.mtr.lift_display_color_" + lift.displayColor.name().toLowerCase(Locale.ENGLISH))),
+					rightColumnX + columnWidth / 2, SQUARE_SIZE * rightRow + TEXT_PADDING, ARGB_WHITE);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -291,5 +301,6 @@ public class LiftCustomizationScreen extends ScreenMapper implements IGui, IPack
 		buttonMaxSpeedAdd.active = lift.maxSpeed < MAX_SPEED;
 		buttonIsDoubleSided.setChecked(lift.isDoubleSided);
 		buttonLiftStyle.setMessage(Text.translatable("gui.mtr.lift_style", Text.translatable("gui.mtr.lift_style_" + lift.liftStyle.toString().toLowerCase(Locale.ENGLISH))));
+		buttonDisplayColor.setMessage(Text.translatable("gui.mtr.lift_display_color", Text.translatable("gui.mtr.lift_display_color_" + lift.displayColor.name().toLowerCase(Locale.ENGLISH))));
 	}
 }

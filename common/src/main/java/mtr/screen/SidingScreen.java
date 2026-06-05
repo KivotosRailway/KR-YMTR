@@ -38,7 +38,7 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 	private final DashboardList availableTrainsList;
 	private final WidgetBetterCheckbox buttonUnlimitedTrains;
 	private final WidgetBetterTextField textFieldMaxTrains;
-	private final WidgetShorterSlider sliderAccelerationConstant;
+	private final WidgetBetterTextField textFieldAcceleration;
 	private final WidgetBetterCheckbox buttonIsManual;
 	private final WidgetShorterSlider sliderMaxManualSpeed;
 
@@ -61,7 +61,8 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		buttonSelectTrain = UtilitiesClient.newButton(button -> onSelectingTrain());
 		availableTrainsList = new DashboardList(null, null, null, null, this::onAdd, null, null, () -> ClientData.TRAINS_SEARCH, text -> ClientData.TRAINS_SEARCH = text);
 		textFieldMaxTrains = new WidgetBetterTextField(WidgetBetterTextField.TextFieldFilter.POSITIVE_INTEGER, "", MAX_TRAINS_TEXT_LENGTH);
-		sliderAccelerationConstant = new WidgetShorterSlider(0, MAX_TRAINS_WIDTH, Math.round((Train.MAX_ACCELERATION - Train.MIN_ACCELERATION) * SLIDER_SCALE), this::accelerationSliderFormatter, null);
+		textFieldAcceleration = new WidgetBetterTextField(WidgetBetterTextField.TextFieldFilter.POSITIVE_FLOAT,
+				Text.translatable("gui.mtr.acceleration").getString(), 8);
 		buttonIsManual = new WidgetBetterCheckbox(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.is_manual"), checked -> {
 			if (checked && !textFieldMaxTrains.getValue().equals("1")) {
 				textFieldMaxTrains.setValue("1");
@@ -113,10 +114,10 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 			setIsSelectingTrain(false);
 		});
 
-		UtilitiesClient.setWidgetX(sliderAccelerationConstant, SQUARE_SIZE + textWidth);
-		UtilitiesClient.setWidgetY(sliderAccelerationConstant, SQUARE_SIZE * 4 + TEXT_FIELD_PADDING * 2);
-		sliderAccelerationConstant.setHeight(SQUARE_SIZE);
-		sliderAccelerationConstant.setValue(Math.round((savedRailBase.getAccelerationConstant() - Train.MIN_ACCELERATION) * SLIDER_SCALE));
+		IDrawing.setPositionAndWidth(textFieldAcceleration, SQUARE_SIZE + textWidth, SQUARE_SIZE * 4 + TEXT_FIELD_PADDING * 2, MAX_TRAINS_WIDTH);
+		float currentAccelMps2 = savedRailBase.getAccelerationConstant() * ACCELERATION_UNIT_CONVERSION_1;
+		textFieldAcceleration.setValue(String.format("%.2f", currentAccelMps2));
+		textFieldAcceleration.setResponder(text -> setIsSelectingTrain(false));
 
 		IDrawing.setPositionAndWidth(buttonIsManual, SQUARE_SIZE, SQUARE_SIZE * 6 + TEXT_FIELD_PADDING * 2, width - textWidth - SQUARE_SIZE * 2);
 
@@ -133,7 +134,7 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		if (showScheduleControls) {
 			addDrawableChild(buttonUnlimitedTrains);
 			addDrawableChild(textFieldMaxTrains);
-			addDrawableChild(sliderAccelerationConstant);
+			addDrawableChild(textFieldAcceleration);
 			addDrawableChild(buttonIsManual);
 			addDrawableChild(sliderMaxManualSpeed);
 		}
@@ -144,6 +145,7 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		super.tick();
 		availableTrainsList.tick();
 		textFieldMaxTrains.tick();
+		textFieldAcceleration.tick();
 	}
 
 	@Override
@@ -194,7 +196,9 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		}
 		float accelerationConstant;
 		try {
-			accelerationConstant = RailwayData.round(Mth.clamp((float) sliderAccelerationConstant.getIntValue() / SLIDER_SCALE + Train.MIN_ACCELERATION, Train.MIN_ACCELERATION, Train.MAX_ACCELERATION), 3);
+			float valueMps2 = Float.parseFloat(textFieldAcceleration.getValue());
+			float valueMptick2 = valueMps2 / ACCELERATION_UNIT_CONVERSION_1;
+			accelerationConstant = RailwayData.round(Mth.clamp(valueMptick2, Train.MIN_ACCELERATION, Train.MAX_ACCELERATION), 3);
 		} catch (Exception ignored) {
 			accelerationConstant = Train.ACCELERATION_DEFAULT;
 		}
@@ -257,7 +261,7 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		buttonSelectTrain.visible = !isSelectingTrain;
 		buttonUnlimitedTrains.visible = !isSelectingTrain;
 		textFieldMaxTrains.visible = !isSelectingTrain;
-		sliderAccelerationConstant.visible = !isSelectingTrain;
+		textFieldAcceleration.visible = !isSelectingTrain;
 		buttonIsManual.visible = !isSelectingTrain;
 		sliderMaxManualSpeed.visible = !isSelectingTrain && buttonIsManual.selected();
 		sliderDwellTimeMin.visible = !isSelectingTrain && buttonIsManual.selected();

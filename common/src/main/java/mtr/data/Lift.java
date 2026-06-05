@@ -36,6 +36,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 	public boolean isDoubleSided;
 	public LiftStyle liftStyle;
 	public Direction facing;
+	public DisplayColor displayColor;
 
 	protected double currentPositionX;
 	protected double currentPositionY;
@@ -70,6 +71,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 	private static final String KEY_CURRENT_POSITION_Z = "current_position_z";
 	private static final String KEY_RIDING_ENTITIES = "riding_entities";
 	private static final String KEY_FLOORS = "floors";
+	private static final String KEY_DISPLAY_COLOR = "display_color";
 
 	public Lift(BlockPos pos, Direction facing) {
 		liftHeight = 4;
@@ -87,6 +89,8 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 
 		acceleration = 0.02F;
 		maxSpeed = 0.5F;
+
+		displayColor = DisplayColor.RED;
 
 		liftInstructions = new LiftInstructions();
 	}
@@ -110,6 +114,8 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 
 		acceleration = (float) messagePackHelper.getDouble(KEY_ACCELERATION, 0.02);
 		maxSpeed = (float) messagePackHelper.getDouble(KEY_MAX_SPEED, 0.5);
+
+		displayColor = EnumHelper.valueOf(DisplayColor.RED, messagePackHelper.getString(KEY_DISPLAY_COLOR));
 
 		messagePackHelper.iterateArrayValue(KEY_RIDING_ENTITIES, value -> ridingEntities.add(UUID.fromString(value.asStringValue().asString())));
 		messagePackHelper.iterateArrayValue(KEY_FLOORS, entry -> floors.add(BlockPos.of(entry.asIntegerValue().toLong())));
@@ -153,6 +159,12 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		}
 
 		liftInstructions = new LiftInstructions(packet);
+
+		if (packet.readableBytes() > 0) {
+			displayColor = EnumHelper.valueOf(DisplayColor.RED, packet.readUtf(PACKET_STRING_READ_LENGTH));
+		} else {
+			displayColor = DisplayColor.RED;
+		}
 	}
 
 	@Override
@@ -170,6 +182,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		messagePacker.packString(KEY_FACING).packInt(Math.round(facing.toYRot()));
 		messagePacker.packString(KEY_ACCELERATION).packFloat(acceleration);
 		messagePacker.packString(KEY_MAX_SPEED).packFloat(maxSpeed);
+		messagePacker.packString(KEY_DISPLAY_COLOR).packString(displayColor.toString());
 		final BlockPos closestFloor = getCurrentFloorBlockPos();
 		messagePacker.packString(KEY_CURRENT_POSITION_X).packDouble(closestFloor.getX());
 		messagePacker.packString(KEY_CURRENT_POSITION_Y).packDouble(closestFloor.getY());
@@ -218,6 +231,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		packet.writeInt(floors.size());
 		floors.forEach(packet::writeBlockPos);
 		liftInstructions.writePacket(packet);
+		packet.writeUtf(displayColor.toString());
 	}
 
 	@Override
@@ -235,6 +249,9 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 
 			acceleration = packet.readFloat();
 			maxSpeed = packet.readFloat();
+			if (packet.readableBytes() > 0) {
+				displayColor = EnumHelper.valueOf(DisplayColor.RED, packet.readUtf(PACKET_STRING_READ_LENGTH));
+			}
 		} else {
 			super.update(key, packet);
 		}
@@ -404,4 +421,14 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 	}
 
 	public enum LiftStyle {TRANSPARENT, OPAQUE}
+
+	public enum DisplayColor {
+		RED(0xFFFF0000),
+		ORANGE(0xFFFFA500),
+		BLUE(0xFF5555FF);
+		public final int color;
+		DisplayColor(int color) {
+			this.color = color;
+		}
+	}
 }

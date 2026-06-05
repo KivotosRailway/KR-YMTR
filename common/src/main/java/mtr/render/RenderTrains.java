@@ -255,7 +255,9 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 				UtilitiesClient.rotateYDegrees(matrices, 180);
 				matrices.pushPose();
 				matrices.translate(0.875F, -1.5, lift.liftDepth / 2F - 0.25 - SMALL_OFFSET);
-				renderLiftDisplay(matrices, vertexConsumers, posAverage, ClientData.DATA_CACHE.requestLiftFloorText(lift.getCurrentFloorBlockPos())[0], lift.getLiftDirection(), 0.1875F, 0.3125F);
+				renderLiftDisplay(matrices, vertexConsumers, posAverage,
+						ClientData.DATA_CACHE.requestLiftFloorText(lift.getCurrentFloorBlockPos())[0],
+						lift.getLiftDirection(), lift.displayColor, 0.1875F, 0.3125F);
 				matrices.popPose();
 			}
 
@@ -377,17 +379,26 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 		UNAVAILABLE_TEXTURES.clear();
 	}
 
-	public static void renderLiftDisplay(PoseStack matrices, MultiBufferSource vertexConsumers, BlockPos pos, String floorNumber, Lift.LiftDirection liftDirection, float maxWidth, float height) {
-		if (RenderTrains.shouldNotRender(pos, Math.min(RenderPIDS.MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), null)) {
+	public static void renderLiftDisplay(PoseStack matrices, MultiBufferSource vertexConsumers, BlockPos pos,
+	                                     String floorNumber, Lift.LiftDirection liftDirection,
+	                                     Lift.DisplayColor displayColor, float maxWidth, float height) {
+		if (shouldNotRender(pos, Math.min(RenderPIDS.MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), null)) {
 			return;
 		}
-
 		final MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-		IDrawing.drawStringWithFont(matrices, Minecraft.getInstance().font, immediate, floorNumber, IGui.HorizontalAlignment.CENTER, VerticalAlignment.BOTTOM, 0, height, maxWidth, -1, 18 / maxWidth, LIFT_LIGHT_COLOR, false, MAX_LIGHT_GLOWING, null);
+		IDrawing.drawStringWithFont(matrices, Minecraft.getInstance().font, immediate, floorNumber,
+				IGui.HorizontalAlignment.CENTER, VerticalAlignment.BOTTOM,
+				0, height, maxWidth, -1, 18 / maxWidth,
+				displayColor.color, false, MAX_LIGHT_GLOWING, null);
 		immediate.endBatch();
 
 		if (liftDirection != Lift.LiftDirection.NONE) {
-			IDrawing.drawTexture(matrices, vertexConsumers.getBuffer(MoreRenderLayers.getLight(ARROW_TEXTURE, true)), -maxWidth / 6, 0, maxWidth / 3, maxWidth / 3, 0, liftDirection == Lift.LiftDirection.UP ? 0 : 1, 1, liftDirection == Lift.LiftDirection.UP ? 1 : 0, Direction.UP, LIFT_LIGHT_COLOR, MAX_LIGHT_GLOWING);
+			IDrawing.drawTexture(matrices,
+					vertexConsumers.getBuffer(MoreRenderLayers.getLight(ARROW_TEXTURE, true)),
+					-maxWidth / 6, 0, maxWidth / 3, maxWidth / 3,
+					0, liftDirection == Lift.LiftDirection.UP ? 0 : 1,
+					1, liftDirection == Lift.LiftDirection.UP ? 1 : 0,
+					Direction.UP, displayColor.color, MAX_LIGHT_GLOWING);
 		}
 	}
 

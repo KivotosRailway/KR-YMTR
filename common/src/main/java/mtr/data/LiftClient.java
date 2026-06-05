@@ -73,6 +73,7 @@ public class LiftClient extends Lift {
 		speed = lift.speed;
 		acceleration = lift.acceleration;
 		maxSpeed = lift.maxSpeed;
+		displayColor = lift.displayColor;
 		doorOpen = lift.doorOpen;
 		doorValue = lift.doorValue;
 		frontCanOpen = lift.frontCanOpen;
@@ -103,6 +104,8 @@ public class LiftClient extends Lift {
 
 		packet.writeFloat(acceleration);
 		packet.writeFloat(maxSpeed);
+
+		packet.writeUtf(displayColor.toString());
 
 		sendPacket.accept(packet);
 	}
