@@ -199,7 +199,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 16;
+		return super.messagePackLength() + 512;
 	}
 
 	@Override

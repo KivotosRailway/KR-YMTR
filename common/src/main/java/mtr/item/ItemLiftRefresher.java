@@ -38,14 +38,11 @@ public class ItemLiftRefresher extends ItemWithCreativeTabBase {
 			return super.useOn(context);
 		}
 	}
-
 	public static void refreshLift(Level world, BlockPos clickedPos, int offsetX, int offsetZ, int width, int depth, boolean isDoubleSided, Direction forceFacing) {
 		refreshLift(world, clickedPos, null, offsetX, offsetZ, width, depth, isDoubleSided, forceFacing);
 	}
-
 	private static InteractionResult refreshLift(Level world, BlockPos clickedPos, Player player, int offsetX, int offsetZ, int width, int depth, boolean isDoubleSided, Direction forceFacing) {
 		final RailwayData railwayData = RailwayData.getInstance(world);
-
 		if (world.getBlockState(clickedPos).getBlock() instanceof BlockLiftTrack && railwayData != null) {
 			final List<BlockPos> floors = new ArrayList<>();
 			final Set<LiftServer> liftsToModify = new HashSet<>();
@@ -53,13 +50,9 @@ public class ItemLiftRefresher extends ItemWithCreativeTabBase {
 			boolean scanForFloors = false;
 			BlockPos firstFloor = null;
 			Direction facing = null;
-
-			railwayData.lifts.removeIf(lift -> lift.isInvalidLift(world));
-
 			while (true) {
 				final BlockPos checkPos = clickedPos.below(i);
 				final Block checkBlock = world.getBlockState(checkPos).getBlock();
-
 				if (!(checkBlock instanceof BlockLiftTrack)) {
 					if (scanForFloors) {
 						break;
@@ -67,7 +60,6 @@ public class ItemLiftRefresher extends ItemWithCreativeTabBase {
 						scanForFloors = true;
 					}
 				}
-
 				if (scanForFloors && checkBlock instanceof BlockLiftTrackFloor) {
 					final BlockEntity blockEntity = world.getBlockEntity(checkPos);
 					if (blockEntity instanceof BlockLiftTrackFloor.TileEntityLiftTrackFloor) {
@@ -83,10 +75,8 @@ public class ItemLiftRefresher extends ItemWithCreativeTabBase {
 						}
 					});
 				}
-
 				i += (scanForFloors ? -1 : 1);
 			}
-
 			final InteractionResult result;
 			if (floors.isEmpty() || firstFloor == null || facing == null) {
 				if (player != null) {
@@ -96,27 +86,46 @@ public class ItemLiftRefresher extends ItemWithCreativeTabBase {
 			} else {
 				boolean hasSetFloors = false;
 				long liftId = 0;
+				LiftServer retainedLift = null;
 				for (final LiftServer lift : liftsToModify) {
-					if (hasSetFloors) {
-						railwayData.lifts.remove(lift);
-					} else {
-						liftId = setLiftData(lift, floors, offsetX, offsetZ, width, depth, isDoubleSided);
+					if (!hasSetFloors) {
+						retainedLift = lift;
+						lift.setFloors(floors);
+						liftId = lift.id;
 						hasSetFloors = true;
+					} else {
+						railwayData.lifts.remove(lift);
 					}
 				}
-
 				if (!hasSetFloors) {
 					final LiftServer newLift = new LiftServer(firstFloor, forceFacing == null ? facing : forceFacing);
-					liftId = setLiftData(newLift, floors, offsetX, offsetZ, width, depth, isDoubleSided);
+					newLift.setFloors(floors);
+					newLift.liftOffsetX = offsetX;
+					newLift.liftOffsetZ = offsetZ;
+					newLift.liftWidth = width;
+					newLift.liftDepth = depth;
+					newLift.isDoubleSided = isDoubleSided;
 					railwayData.lifts.add(newLift);
+					liftId = newLift.id;
+				} else {
+					if (retainedLift != null && retainedLift.isInvalidLift(world)) {
+						railwayData.lifts.remove(retainedLift);
+						final LiftServer newLift = new LiftServer(firstFloor, forceFacing == null ? facing : forceFacing);
+						newLift.setFloors(floors);
+						newLift.liftOffsetX = offsetX;
+						newLift.liftOffsetZ = offsetZ;
+						newLift.liftWidth = width;
+						newLift.liftDepth = depth;
+						newLift.isDoubleSided = isDoubleSided;
+						railwayData.lifts.add(newLift);
+						liftId = newLift.id;
+					}
 				}
-
 				if (player != null) {
 					PacketTrainDataGuiServer.openLiftCustomizationScreenS2C((ServerPlayer) player, liftId);
 				}
 				result = InteractionResult.SUCCESS;
 			}
-
 			railwayData.dataCache.sync();
 			return result;
 		} else {
@@ -127,6 +136,7 @@ public class ItemLiftRefresher extends ItemWithCreativeTabBase {
 		}
 	}
 
+	@Deprecated
 	private static long setLiftData(LiftServer lift, List<BlockPos> floors, int offsetX, int offsetZ, int width, int depth, boolean isDoubleSided) {
 		lift.setFloors(floors);
 		lift.liftOffsetX = offsetX;
