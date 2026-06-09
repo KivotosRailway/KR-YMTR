@@ -434,6 +434,13 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		return path.get(nextStoppingIndex).dwellTime * 10;
 	}
 
+	protected int getAdcTimeTicks() {
+		if (nextStoppingIndex < path.size()) {
+			return path.get(nextStoppingIndex).adcTime * 10;
+		}
+		return 0;
+	}
+
 	protected final void simulateTrain(Level world, float ticksElapsed, Depot depot) {
 		if (world == null) {
 			return;
@@ -494,7 +501,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							tempDoorOpen = openDoors();
 						}
 
-						if (!world.isClientSide() && (isCurrentlyManual || elapsedDwellTicks >= totalDwellTicks) && !railBlocked && (!isCurrentlyManual || manualNotch > 0)) {
+						final int adcTimeTicks = isCurrentlyManual ? 0 : getAdcTimeTicks();
+						if (!world.isClientSide() && (isCurrentlyManual || elapsedDwellTicks >= totalDwellTicks + adcTimeTicks) && !railBlocked && (!isCurrentlyManual || manualNotch > 0)) {
 							startUp(world, trainCars, spacing, isOppositeRail);
 						}
 					} else {

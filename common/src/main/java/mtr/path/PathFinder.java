@@ -107,21 +107,21 @@ public class PathFinder {
 									final int turnArc = Math.min(MAX_AIRPLANE_TURN_ARC, cruisingPos1.distManhattan(cruisingPos4) / 8);
 									final RailType dummyRailType = useFastSpeed ? RailType.AIRPLANE_DUMMY : RailType.RUNWAY;
 
-									railPath.add(new PathData(new Rail(pos1, pathPart1.direction, cruisingPos1, pathPart1.direction.getOpposite(), dummyRailType, TransportMode.AIRPLANE), 0, 0, pos1, cruisingPos1, stopIndex));
+									new PathData(new Rail(pos1, pathPart1.direction, cruisingPos1, pathPart1.direction.getOpposite(), dummyRailType, TransportMode.AIRPLANE), 0, 0, 0, pos1, cruisingPos1, stopIndex);
 
 									final RailAngle expectedAngle = RailAngle.fromAngle((float) Math.toDegrees(Math.atan2(cruisingPos4.getZ() - cruisingPos1.getZ(), cruisingPos4.getX() - cruisingPos1.getX())));
 									final BlockPos cruisingPos2 = addAirplanePath(pathPart1.direction, cruisingPos1, expectedAngle, turnArc, railPath, dummyRailType, stopIndex, false);
 									final List<PathData> tempRailData = new ArrayList<>();
 									final BlockPos cruisingPos3 = addAirplanePath(pathPart2.direction.getOpposite(), cruisingPos4, expectedAngle.getOpposite(), turnArc, tempRailData, dummyRailType, stopIndex, true);
 
-									railPath.add(new PathData(new Rail(cruisingPos2, expectedAngle, cruisingPos3, expectedAngle.getOpposite(), dummyRailType, TransportMode.AIRPLANE), 0, 0, cruisingPos2, cruisingPos3, stopIndex));
+									railPath.add(new PathData(new Rail(cruisingPos2, expectedAngle, cruisingPos3, expectedAngle.getOpposite(), dummyRailType, TransportMode.AIRPLANE), 0, 0, 0, cruisingPos2, cruisingPos3, stopIndex));
 									railPath.addAll(tempRailData);
 
-									railPath.add(new PathData(new Rail(cruisingPos4, pathPart2.direction, pos2, pathPart2.direction.getOpposite(), dummyRailType, TransportMode.AIRPLANE), 0, 0, cruisingPos4, pos2, stopIndex));
+									railPath.add(new PathData(new Rail(cruisingPos4, pathPart2.direction, pos2, pathPart2.direction.getOpposite(), dummyRailType, TransportMode.AIRPLANE), 0, 0, 0, cruisingPos4, pos2, stopIndex));
 								}
 							} else {
 								final boolean turningBack = rail.railType == RailType.TURN_BACK && j < path.size() - 2 && path.get(j + 2).pos.equals(pos1);
-								railPath.add(new PathData(rail, j == 0 ? savedRailBaseStart.id : 0, turningBack ? 1 : 0, pos1, pos2, stopIndex));
+								railPath.add(new PathData(rail, j == 0 ? savedRailBaseStart.id : 0, turningBack ? 1 : 0, 0, pos1, pos2, stopIndex));
 							}
 						}
 
@@ -130,7 +130,8 @@ public class PathFinder {
 						if (rail == null) {
 							return new ArrayList<>();
 						} else {
-							railPath.add(new PathData(rail, savedRailBaseEnd.id, savedRailBaseEnd instanceof Platform ? savedRailBaseEnd.getDwellTime() : 0, newPos, endPos, stopIndex + 1));
+							int adcTime = savedRailBaseEnd instanceof Platform ? savedRailBaseEnd.getAdcTime() : 0;
+							railPath.add(new PathData(rail, savedRailBaseEnd.id, savedRailBaseEnd instanceof Platform ? savedRailBaseEnd.getDwellTime() : 0, adcTime, newPos, endPos, stopIndex + 1));
 							return railPath;
 						}
 					}
@@ -193,9 +194,9 @@ public class PathFinder {
 			tempPos = RailwayData.offsetBlockPos(oldTempPos, posOffset.x, posOffset.y, posOffset.z);
 
 			if (reverse) {
-				tempRailPath.add(0, new PathData(new Rail(tempPos, tempAngle.getOpposite(), oldTempPos, oldTempAngle, railType, TransportMode.AIRPLANE), 0, 0, tempPos, oldTempPos, stopIndex));
+				tempRailPath.add(0, new PathData(new Rail(tempPos, tempAngle.getOpposite(), oldTempPos, oldTempAngle, railType, TransportMode.AIRPLANE), 0, 0, 0, tempPos, oldTempPos, stopIndex));
 			} else {
-				tempRailPath.add(new PathData(new Rail(oldTempPos, oldTempAngle, tempPos, tempAngle.getOpposite(), railType, TransportMode.AIRPLANE), 0, 0, oldTempPos, tempPos, stopIndex));
+				tempRailPath.add(new PathData(new Rail(oldTempPos, oldTempAngle, tempPos, tempAngle.getOpposite(), railType, TransportMode.AIRPLANE), 0, 0, 0, oldTempPos, tempPos, stopIndex));
 			}
 		}
 

@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 public final class Platform extends SavedRailBase {
 
 	private static final String KEY_DWELL_TIME = "dwell_time";
+	private static final String KEY_ADC_TIME = "adc_time";
 
 	public Platform(long id, TransportMode transportMode, BlockPos pos1, BlockPos pos2) {
 		super(id, transportMode, pos1, pos2);
@@ -41,6 +42,9 @@ public final class Platform extends SavedRailBase {
 			color = packet.readInt();
 			dwellTime = packet.readInt();
 			dwellTime = transportMode.continuousMovement ? 1 : dwellTime;
+		} else if (KEY_ADC_TIME.equals(key)) {
+			adcTime = packet.readInt();
+			adcTime = transportMode.continuousMovement ? 0 : adcTime;
 		} else {
 			super.update(key, packet);
 		}
@@ -54,6 +58,22 @@ public final class Platform extends SavedRailBase {
 		packet.writeUtf(name);
 		packet.writeInt(color);
 		writeDwellTimePacket(packet, newDwellTime);
+		sendPacket.accept(packet);
+	}
+
+	public void setAdcTime(int newAdcTime, Consumer<FriendlyByteBuf> sendPacket) {
+		if (transportMode.continuousMovement) {
+			adcTime = 0;
+		} else if (newAdcTime < 0 || newAdcTime > MAX_ADC_TIME) {
+			adcTime = 0;
+		} else {
+			adcTime = newAdcTime;
+		}
+		final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+		packet.writeLong(id);
+		packet.writeUtf(transportMode.toString());
+		packet.writeUtf(KEY_ADC_TIME);
+		packet.writeInt(adcTime);
 		sendPacket.accept(packet);
 	}
 }

@@ -15,13 +15,17 @@ import java.util.*;
 public abstract class SavedRailBase extends NameColorDataBase {
 
 	protected int dwellTime;
+	protected int adcTime;
 	private final Set<BlockPos> positions;
 
 	public static final int MAX_DWELL_TIME = 1200;
+	public static final int MAX_ADC_TIME = 1200;
 	private static final int DEFAULT_DWELL_TIME = 20;
+	private static final int DEFAULT_ADC_TIME = 0;
 	private static final String KEY_POS_1 = "pos_1";
 	private static final String KEY_POS_2 = "pos_2";
 	private static final String KEY_DWELL_TIME = "dwell_time";
+	private static final String KEY_ADC_TIME = "adc_time";
 
 	public SavedRailBase(long id, TransportMode transportMode, BlockPos pos1, BlockPos pos2) {
 		super(id, transportMode);
@@ -30,6 +34,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		positions.add(pos1);
 		positions.add(pos2);
 		dwellTime = transportMode.continuousMovement ? 1 : DEFAULT_DWELL_TIME;
+		adcTime = DEFAULT_ADC_TIME;
 	}
 
 	public SavedRailBase(TransportMode transportMode, BlockPos pos1, BlockPos pos2) {
@@ -39,6 +44,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		positions.add(pos1);
 		positions.add(pos2);
 		dwellTime = transportMode.continuousMovement ? 1 : DEFAULT_DWELL_TIME;
+		adcTime = DEFAULT_ADC_TIME;
 	}
 
 	public SavedRailBase(Map<String, Value> map) {
@@ -48,6 +54,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		positions.add(BlockPos.of(messagePackHelper.getLong(KEY_POS_1)));
 		positions.add(BlockPos.of(messagePackHelper.getLong(KEY_POS_2)));
 		dwellTime = transportMode.continuousMovement ? 1 : messagePackHelper.getInt(KEY_DWELL_TIME);
+		adcTime = messagePackHelper.getInt(KEY_ADC_TIME);
 	}
 
 	@Deprecated
@@ -57,6 +64,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		positions.add(BlockPos.of(compoundTag.getLong(KEY_POS_1)));
 		positions.add(BlockPos.of(compoundTag.getLong(KEY_POS_2)));
 		dwellTime = transportMode.continuousMovement ? 1 : compoundTag.getInt(KEY_DWELL_TIME);
+		adcTime = compoundTag.getInt(KEY_ADC_TIME);
 	}
 
 	public SavedRailBase(FriendlyByteBuf packet) {
@@ -66,6 +74,8 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		positions.add(packet.readBlockPos());
 		dwellTime = packet.readInt();
 		dwellTime = transportMode.continuousMovement ? 1 : dwellTime;
+		adcTime = packet.readInt();
+		adcTime = transportMode.continuousMovement ? 0 : adcTime;
 	}
 
 	@Override
@@ -75,11 +85,12 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		messagePacker.packString(KEY_POS_1).packLong(getPosition(0).asLong());
 		messagePacker.packString(KEY_POS_2).packLong(getPosition(1).asLong());
 		messagePacker.packString(KEY_DWELL_TIME).packInt(dwellTime);
+		messagePacker.packString(KEY_ADC_TIME).packInt(adcTime);
 	}
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 3;
+		return super.messagePackLength() + 4;
 	}
 
 	@Override
@@ -88,6 +99,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		packet.writeBlockPos(getPosition(0));
 		packet.writeBlockPos(getPosition(1));
 		packet.writeInt(dwellTime);
+		packet.writeInt(adcTime);
 	}
 
 	@Override
@@ -158,6 +170,13 @@ public abstract class SavedRailBase extends NameColorDataBase {
 			dwellTime = DEFAULT_DWELL_TIME;
 		}
 		return transportMode.continuousMovement ? 1 : dwellTime;
+	}
+
+	public int getAdcTime() {
+		if (adcTime < 0 || adcTime > MAX_ADC_TIME) {
+			adcTime = DEFAULT_ADC_TIME;
+		}
+		return transportMode.continuousMovement ? 0 : adcTime;
 	}
 
 	protected void writeDwellTimePacket(FriendlyByteBuf packet, int newDwellTime) {

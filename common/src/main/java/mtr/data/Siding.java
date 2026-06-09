@@ -51,6 +51,7 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 	private static final String KEY_REPEAT_INDEX_2 = "repeat_index_2";
 	private static final String KEY_TRAINS = "trains";
 	private static final String KEY_ACCELERATION_CONSTANT = "acceleration_constant";
+	private static final String KEY_ADC_TIME = "adc_time";
 
 	public Siding(long id, TransportMode transportMode, BlockPos pos1, BlockPos pos2, float railLength) {
 		super(id, transportMode, pos1, pos2);
@@ -196,6 +197,10 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 				if (packet.readBoolean()) {
 					trains.clear();
 				}
+				break;
+			case KEY_ADC_TIME:
+				adcTime = packet.readInt();
+				adcTime = transportMode.continuousMovement ? 0 : adcTime;
 				break;
 			default:
 				super.update(key, packet);
@@ -452,7 +457,7 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 		final BlockPos pos1 = orderedPositions.get(0);
 		final BlockPos pos2 = orderedPositions.get(1);
 		if (RailwayData.containsRail(rails, pos1, pos2)) {
-			path.add(new PathData(rails.get(pos1).get(pos2), id, 0, pos1, pos2, -1));
+			path.add(new PathData(rails.get(pos1).get(pos2), id, 0, 0, pos1, pos2, -1));
 		}
 
 		trains.add(new TrainServer(id, id, railLength, trainId, baseTrainType, trainCars, path, distances, repeatIndex1, repeatIndex2, accelerationConstant, timeSegments, isManual, maxManualSpeed, dwellTime));
