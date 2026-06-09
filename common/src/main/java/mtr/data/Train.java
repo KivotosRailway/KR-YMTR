@@ -62,7 +62,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 
 	public static final float ACCELERATION_DEFAULT = 0.01F; // m/tick^2
 	public static final float MAX_ACCELERATION = 0.05F; // m/tick^2
-	public static final float MIN_ACCELERATION = 0.001F; // m/tick^2
+	public static final float MIN_ACCELERATION = 0.0001F; // m/tick^2
+	public static final int ACCELERATION_DECIMAL_PLACES = 5; // 对应 0.00001 m/tick^2 精度
 	public static final int DOOR_MOVE_TIME = 64;
 	protected static final int MAX_CHECK_DISTANCE = 32;
 	protected static final int DOOR_DELAY = 20;
@@ -101,8 +102,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		this.distances = distances;
 		this.repeatIndex1 = repeatIndex1;
 		this.repeatIndex2 = repeatIndex2;
-		final float tempAccelerationConstant = RailwayData.round(accelerationConstant, 3);
-		this.accelerationConstant = tempAccelerationConstant <= 0 ? ACCELERATION_DEFAULT : tempAccelerationConstant;
+		final float tempAccelerationConstant = RailwayData.round(accelerationConstant, ACCELERATION_DECIMAL_PLACES);
+		this.accelerationConstant = tempAccelerationConstant < MIN_ACCELERATION ? ACCELERATION_DEFAULT : tempAccelerationConstant;
 		inventory = new SimpleContainer(trainCars);
 	}
 
@@ -224,8 +225,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		sidingId = packet.readLong();
 		railLength = RailwayData.round(packet.readFloat(), 3);
 		speed = packet.readFloat();
-		final float tempAccelerationConstant = RailwayData.round(packet.readFloat(), 3);
-		accelerationConstant = tempAccelerationConstant <= 0 ? ACCELERATION_DEFAULT : tempAccelerationConstant;
+		final float tempAccelerationConstant = RailwayData.round(packet.readFloat(), ACCELERATION_DECIMAL_PLACES);
+		accelerationConstant = tempAccelerationConstant < MIN_ACCELERATION ? ACCELERATION_DEFAULT : tempAccelerationConstant;
 		railProgress = packet.readDouble();
 		elapsedDwellTicks = packet.readFloat();
 		nextStoppingIndex = packet.readInt();

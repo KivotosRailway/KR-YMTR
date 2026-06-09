@@ -144,22 +144,17 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		speed = packet.readDouble();
 		doorOpen = packet.readBoolean();
 		doorValue = packet.readFloat();
-
 		acceleration = packet.readFloat();
 		maxSpeed = packet.readFloat();
-
 		final int ridingEntitiesCount = packet.readInt();
 		for (int i = 0; i < ridingEntitiesCount; i++) {
 			ridingEntities.add(packet.readUUID());
 		}
-
 		final int floorCount = packet.readInt();
 		for (int i = 0; i < floorCount; i++) {
 			floors.add(packet.readBlockPos());
 		}
-
 		liftInstructions = new LiftInstructions(packet);
-
 		if (packet.readableBytes() > 0) {
 			displayColor = EnumHelper.valueOf(DisplayColor.RED, packet.readUtf(PACKET_STRING_READ_LENGTH));
 		} else {
@@ -199,7 +194,7 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 512;
+		return super.messagePackLength() + 17;
 	}
 
 	@Override
@@ -342,13 +337,11 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 			liftInstructions.getTargetFloor(targetFloor -> {
 				final double stoppingDistance = Math.abs(targetFloor - currentPositionY);
 				liftDirection = stoppingDistance < 0.01 ? LiftDirection.NONE : targetFloor > currentPositionY ? LiftDirection.UP : LiftDirection.DOWN;
-
 				if (liftDirection == LiftDirection.NONE) {
 					speed = 0;
 					doorOpen = true;
 					currentPositionY = targetFloor;
 					liftInstructions.arrived();
-
 					if (!world.isClientSide) {
 						final BlockEntity blockEntity = world.getBlockEntity(getBlockPos());
 						if (blockEntity instanceof BlockLiftTrackFloor.TileEntityLiftTrackFloor && ((BlockLiftTrackFloor.TileEntityLiftTrackFloor) blockEntity).getShouldDing()) {
@@ -357,13 +350,18 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 					}
 				} else {
 					if (stoppingDistance < 0.5 * speed * speed / acceleration) {
-						speed = Math.max(speed - 0.5 * speed * speed / stoppingDistance * ticksElapsed, acceleration);
+						speed = Math.max(speed - 0.5 * speed * speed / stoppingDistance * ticksElapsed, acceleration * 0.5F);
 					} else {
 						speed = Math.min(speed + acceleration * ticksElapsed, maxSpeed);
 					}
 					currentPositionY += speed * liftDirection.speedMultiplier * ticksElapsed;
 				}
 			});
+
+			frontCanOpen = checkDoor(world, true);
+			if (isDoubleSided) {
+				backCanOpen = checkDoor(world, false);
+			}
 		} else {
 			if (!doorOpen && doorValue > 0 || doorOpen && doorValue < DOOR_MAX * 2) {
 				if (doorOpen) {
@@ -393,11 +391,19 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 		final int sign = front ? 1 : -1;
 		boolean hasDoor = false;
 		for (int i = -1; i <= 1; i++) {
-			final BlockPos checkPos = RailwayData.newBlockPos(currentPositionX + liftOffsetX / 2F - facing.getStepX() * sign * (liftDepth / 2F + 0.5) + directionClockwise.getStepX() * i, currentPositionY + liftOffsetY, currentPositionZ + liftOffsetZ / 2F - facing.getStepZ() * sign * (liftDepth / 2F + 0.5) + directionClockwise.getStepZ() * i);
-			if (world.getNearestPlayer(currentPositionX, currentPositionY, currentPositionZ, Train.MAX_CHECK_DISTANCE, entity -> true) != null && RailwayData.chunkLoaded(world, checkPos) && RailwayData.chunkLoaded(world, checkPos.above())) {
+			final BlockPos checkPos = RailwayData.newBlockPos(
+					currentPositionX + liftOffsetX / 2F - facing.getStepX() * sign * (liftDepth / 2F + 0.5) + directionClockwise.getStepX() * i,
+					currentPositionY + liftOffsetY,
+					currentPositionZ + liftOffsetZ / 2F - facing.getStepZ() * sign * (liftDepth / 2F + 0.5) + directionClockwise.getStepZ() * i
+			);
+			if (world.getNearestPlayer(currentPositionX, currentPositionY, currentPositionZ, Train.MAX_CHECK_DISTANCE, entity -> true) != null
+					&& RailwayData.chunkLoaded(world, checkPos) && RailwayData.chunkLoaded(world, checkPos.above())) {
 				final BlockEntity entity1 = world.getBlockEntity(checkPos);
 				final BlockEntity entity2 = world.getBlockEntity(checkPos.above());
-				if (entity1 instanceof BlockPSDAPGDoorBase.TileEntityPSDAPGDoorBase && entity2 instanceof BlockPSDAPGDoorBase.TileEntityPSDAPGDoorBase && IBlock.getStatePropertySafe(world, checkPos, BlockPSDAPGDoorBase.UNLOCKED) && IBlock.getStatePropertySafe(world, checkPos.above(), BlockPSDAPGDoorBase.UNLOCKED)) {
+				if (entity1 instanceof BlockPSDAPGDoorBase.TileEntityPSDAPGDoorBase
+						&& entity2 instanceof BlockPSDAPGDoorBase.TileEntityPSDAPGDoorBase
+						&& IBlock.getStatePropertySafe(world, checkPos, BlockPSDAPGDoorBase.UNLOCKED)
+						&& IBlock.getStatePropertySafe(world, checkPos.above(), BlockPSDAPGDoorBase.UNLOCKED)) {
 					if (!world.isClientSide) {
 						((BlockPSDAPGDoorBase.TileEntityPSDAPGDoorBase) entity1).setOpen(Math.min(Math.round(doorValue), DOOR_MAX));
 						((BlockPSDAPGDoorBase.TileEntityPSDAPGDoorBase) entity2).setOpen(Math.min(Math.round(doorValue), DOOR_MAX));
@@ -406,7 +412,6 @@ public abstract class Lift extends NameColorDataBase implements IPacket {
 				}
 			}
 		}
-
 		return hasDoor;
 	}
 

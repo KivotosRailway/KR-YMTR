@@ -79,8 +79,8 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 		maxManualSpeed = messagePackHelper.getInt(KEY_MAX_MANUAL_SPEED);
 		repeatIndex1 = messagePackHelper.getInt(KEY_REPEAT_INDEX_1);
 		repeatIndex2 = messagePackHelper.getInt(KEY_REPEAT_INDEX_2);
-		final float tempAccelerationConstant = RailwayData.round(messagePackHelper.getFloat(KEY_ACCELERATION_CONSTANT, Train.ACCELERATION_DEFAULT), 3);
-		accelerationConstant = transportMode.continuousMovement ? Train.MAX_ACCELERATION : tempAccelerationConstant <= 0 ? Train.ACCELERATION_DEFAULT : tempAccelerationConstant;
+		final float tempAccelerationConstant = RailwayData.round(messagePackHelper.getFloat(KEY_ACCELERATION_CONSTANT, Train.ACCELERATION_DEFAULT), Train.ACCELERATION_DECIMAL_PLACES);
+		accelerationConstant = transportMode.continuousMovement ? Train.MAX_ACCELERATION : tempAccelerationConstant < Train.MIN_ACCELERATION ? Train.ACCELERATION_DEFAULT : tempAccelerationConstant;
 
 		messagePackHelper.iterateArrayValue(KEY_PATH, pathSection -> path.add(new PathData(RailwayData.castMessagePackValueToSKMap(pathSection))));
 
@@ -125,8 +125,8 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 		maxTrains = packet.readInt();
 		isManual = packet.readBoolean();
 		maxManualSpeed = packet.readInt();
-		final float tempAccelerationConstant = RailwayData.round(packet.readFloat(), 3);
-		accelerationConstant = transportMode.continuousMovement ? Train.MAX_ACCELERATION : tempAccelerationConstant <= 0 ? Train.ACCELERATION_DEFAULT : tempAccelerationConstant;
+		final float tempAccelerationConstant = RailwayData.round(packet.readFloat(), Train.ACCELERATION_DECIMAL_PLACES);
+		accelerationConstant = transportMode.continuousMovement ? Train.MAX_ACCELERATION : tempAccelerationConstant < Train.MIN_ACCELERATION ? Train.ACCELERATION_DEFAULT : tempAccelerationConstant;
 	}
 
 	@Override
@@ -191,7 +191,7 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 				maxTrains = packet.readInt();
 				isManual = packet.readBoolean();
 				maxManualSpeed = packet.readInt();
-				final float newAccelerationConstant = RailwayData.round(packet.readFloat(), 3);
+				final float newAccelerationConstant = RailwayData.round(packet.readFloat(), Train.ACCELERATION_DECIMAL_PLACES);
 				accelerationConstant = transportMode.continuousMovement ? Train.MAX_ACCELERATION : newAccelerationConstant;
 				if (packet.readBoolean()) {
 					trains.clear();
@@ -226,7 +226,7 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 		packet.writeInt(maxTrains);
 		packet.writeBoolean(isManual);
 		packet.writeInt(maxManualSpeed);
-		final float tempAccelerationConstant = RailwayData.round(accelerationConstant, 3);
+		final float tempAccelerationConstant = RailwayData.round(accelerationConstant, Train.ACCELERATION_DECIMAL_PLACES);
 		packet.writeFloat(tempAccelerationConstant);
 		packet.writeBoolean(clearTrains);
 		sendPacket.accept(packet);
@@ -570,8 +570,8 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 			this.startSpeed = startSpeed;
 			this.startTime = startTime;
 			this.speedChange = Integer.compare(speedChange, 0);
-			final float tempAccelerationConstant = RailwayData.round(accelerationConstant, 3);
-			this.accelerationConstant = tempAccelerationConstant <= 0 ? Train.ACCELERATION_DEFAULT : tempAccelerationConstant;
+			final float tempAccelerationConstant = RailwayData.round(accelerationConstant, Train.ACCELERATION_DECIMAL_PLACES);
+			this.accelerationConstant = tempAccelerationConstant < Train.MIN_ACCELERATION ? Train.ACCELERATION_DEFAULT : tempAccelerationConstant;
 		}
 
 		public double getTime(double railProgress) {

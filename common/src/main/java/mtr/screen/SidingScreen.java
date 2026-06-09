@@ -116,7 +116,7 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 
 		IDrawing.setPositionAndWidth(textFieldAcceleration, SQUARE_SIZE + textWidth, SQUARE_SIZE * 4 + TEXT_FIELD_PADDING * 2, MAX_TRAINS_WIDTH);
 		float currentAccelMps2 = savedRailBase.getAccelerationConstant() * ACCELERATION_UNIT_CONVERSION_1;
-		textFieldAcceleration.setValue(String.format("%.2f", currentAccelMps2));
+		textFieldAcceleration.setValue(String.format("%.3f", currentAccelMps2));
 		textFieldAcceleration.setResponder(text -> setIsSelectingTrain(false));
 
 		IDrawing.setPositionAndWidth(buttonIsManual, SQUARE_SIZE, SQUARE_SIZE * 6 + TEXT_FIELD_PADDING * 2, width - textWidth - SQUARE_SIZE * 2);
@@ -197,8 +197,10 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		float accelerationConstant;
 		try {
 			float valueMps2 = Float.parseFloat(textFieldAcceleration.getValue());
-			float valueMptick2 = valueMps2 / ACCELERATION_UNIT_CONVERSION_1;
-			accelerationConstant = RailwayData.round(Mth.clamp(valueMptick2, Train.MIN_ACCELERATION, Train.MAX_ACCELERATION), 3);
+			double valueMptick2 = valueMps2 / ACCELERATION_UNIT_CONVERSION_1;
+			double clamped = Mth.clamp(valueMptick2, Train.MIN_ACCELERATION, Train.MAX_ACCELERATION);
+			long factor = (long) Math.pow(10, Train.ACCELERATION_DECIMAL_PLACES);
+			accelerationConstant = (float) (Math.round(clamped * factor) / (double) factor);
 		} catch (Exception ignored) {
 			accelerationConstant = Train.ACCELERATION_DEFAULT;
 		}
