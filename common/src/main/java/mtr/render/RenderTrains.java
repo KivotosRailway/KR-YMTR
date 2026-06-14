@@ -402,6 +402,12 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 		}
 	}
 
+	public static void renderLiftDisplay(PoseStack matrices, MultiBufferSource vertexConsumers, BlockPos pos,
+	                                     String floorNumber, Lift.LiftDirection liftDirection,
+	                                     float maxWidth, float height) {
+		renderLiftDisplay(matrices, vertexConsumers, pos, floorNumber, liftDirection, Lift.DisplayColor.RED, maxWidth, height);
+	}
+
 	public static boolean isHoldingRailRelated(Player player) {
 		return Utilities.isHolding(player,
 				item -> item instanceof ItemNodeModifierBase ||

@@ -48,6 +48,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	public final int trainCars;
 	public final float accelerationConstant;
 	public final boolean isManualAllowed;
+	public boolean enablePredictiveBraking;
 	public final int maxManualSpeed;
 	public final int manualToAutomaticTime;
 	public final List<PathData> path;
@@ -94,6 +95,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		spacing = TrainType.getSpacing(baseTrainType);
 		width = TrainType.getWidth(baseTrainType);
 		this.trainCars = trainCars;
+		enablePredictiveBraking = false;
 		this.isManualAllowed = isManualAllowed;
 		isCurrentlyManual = isManualAllowed;
 		this.maxManualSpeed = maxManualSpeed;
@@ -123,6 +125,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		this.repeatIndex1 = repeatIndex1;
 		this.repeatIndex2 = repeatIndex2;
 		this.accelerationConstant = accelerationConstant;
+		enablePredictiveBraking = false;
 		this.isManualAllowed = isManualAllowed;
 		this.maxManualSpeed = maxManualSpeed;
 		this.manualToAutomaticTime = manualToAutomaticTime;
@@ -181,6 +184,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		this.repeatIndex1 = repeatIndex1;
 		this.repeatIndex2 = repeatIndex2;
 		this.accelerationConstant = accelerationConstant;
+		enablePredictiveBraking = false;
 		this.isManualAllowed = isManualAllowed;
 		this.maxManualSpeed = maxManualSpeed;
 		this.manualToAutomaticTime = manualToAutomaticTime;
@@ -239,6 +243,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		width = TrainType.getWidth(baseTrainType);
 		trainCars = Math.min(transportMode.maxLength, (int) Math.floor(railLength / spacing));
 		isManualAllowed = packet.readBoolean();
+		enablePredictiveBraking = packet.readBoolean();
 		isCurrentlyManual = packet.readBoolean();
 		maxManualSpeed = packet.readInt();
 		manualToAutomaticTime = packet.readInt();
@@ -326,6 +331,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		packet.writeUtf(trainId);
 		packet.writeUtf(baseTrainType);
 		packet.writeBoolean(isManualAllowed);
+		packet.writeBoolean(enablePredictiveBraking);
 		packet.writeBoolean(isCurrentlyManual);
 		packet.writeInt(maxManualSpeed);
 		packet.writeInt(manualToAutomaticTime);
@@ -545,7 +551,12 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 									speed = Mth.clamp(speed + manualNotch * newAcceleration / 2, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							} else {
-								final float railSpeed = getRailSpeed(getIndex(0, spacing, false));
+								final float railSpeed;
+								if (enablePredictiveBraking && !transportMode.continuousMovement) {
+									railSpeed = getPredictiveBrakingSpeed();
+								} else {
+									railSpeed = getRailSpeed(getIndex(0, spacing, false));
+								}
 								if (speed < railSpeed) {
 									speed = Math.min(speed + newAcceleration, railSpeed);
 									manualNotch = 2;
@@ -708,6 +719,42 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 
 	private boolean isOppositeRail() {
 		return path.size() > nextStoppingIndex + 1 && railProgress == distances.get(nextStoppingIndex) && path.get(nextStoppingIndex).isOppositeRail(path.get(nextStoppingIndex + 1));
+	}
+
+	private float getPredictiveBrakingSpeed() {
+		final int currentIndex = getIndex(0, spacing, false);
+		final float currentRailSpeed = getRailSpeed(currentIndex);
+
+		// Distance from train head to end of current path segment
+		double cumulativeDistance = distances.get(currentIndex) - railProgress;
+
+		float effectiveSpeed = currentRailSpeed;
+		// Stable scan range based on current track's speed limit, not current speed
+		final double maxLookahead = 0.5 * currentRailSpeed * currentRailSpeed / accelerationConstant + 10;
+
+		for (int i = currentIndex + 1; i < path.size(); i++) {
+			final PathData pd = path.get(i);
+			final RailType rt = pd.rail.railType;
+
+			if (rt.canAccelerate) {
+				final float segSpeed = rt.maxBlocksPerTick;
+				if (segSpeed < speed) {
+					// Exact braking distance: decelerate from current speed to target segment speed
+					final double requiredBrakingDist = 0.5 * (speed * speed - segSpeed * segSpeed) / accelerationConstant;
+					if (cumulativeDistance <= requiredBrakingDist) {
+						effectiveSpeed = Math.min(effectiveSpeed, segSpeed);
+					}
+				}
+			}
+
+			cumulativeDistance += pd.rail.getLength();
+
+			if (cumulativeDistance > maxLookahead) {
+				break;
+			}
+		}
+
+		return effectiveSpeed;
 	}
 
 	private double getRailProgress(int car, int trainSpacing) {
