@@ -18,7 +18,7 @@ public class PlatformScreen extends SavedRailScreenBase<Platform> {
 	private final WidgetShorterSlider sliderAdcTimeSec;
 
 	public PlatformScreen(Platform savedRailBase, TransportMode transportMode, DashboardScreen dashboardScreen) {
-		super(savedRailBase, transportMode, dashboardScreen, DWELL_TIME_TEXT, ADC_TIME_TEXT); // 构造函数需支持变长参数，或修改 SavedRailScreenBase 构造函数
+		super(savedRailBase, transportMode, dashboardScreen, DWELL_TIME_TEXT, ADC_TIME_TEXT);
 		sliderAdcTimeMin = new WidgetShorterSlider(0, 0, (int) Math.floor(Platform.MAX_ADC_TIME / 2F / SECONDS_PER_MINUTE), value -> Text.translatable("gui.mtr.arrival_min", value).getString(), null);
 		sliderAdcTimeSec = new WidgetShorterSlider(0, 0, SECONDS_PER_MINUTE * 2 - 1, 10, 2, value -> Text.translatable("gui.mtr.arrival_sec", value / 2F).getString(), null);
 	}
@@ -32,7 +32,7 @@ public class PlatformScreen extends SavedRailScreenBase<Platform> {
 		UtilitiesClient.setWidgetY(sliderDwellTimeMin, SQUARE_SIZE * 5 / 2 + TEXT_FIELD_PADDING);
 		UtilitiesClient.setWidgetY(sliderDwellTimeSec, SQUARE_SIZE * 3 + TEXT_FIELD_PADDING);
 
-		int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING;
+		int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING + TEXT_HEIGHT;
 		UtilitiesClient.setWidgetX(sliderAdcTimeMin, SQUARE_SIZE + textWidth);
 		sliderAdcTimeMin.setHeight(SQUARE_SIZE / 2);
 		sliderAdcTimeMin.setWidth(width - textWidth - SQUARE_SIZE * 2 - sliderTextWidth);
@@ -56,7 +56,7 @@ public class PlatformScreen extends SavedRailScreenBase<Platform> {
 		super.render(guiGraphics, mouseX, mouseY, delta);
 		if (showScheduleControls) {
 			guiGraphics.drawString(font, DWELL_TIME_TEXT, SQUARE_SIZE, SQUARE_SIZE * 5 / 2 + TEXT_FIELD_PADDING + TEXT_PADDING, ARGB_WHITE);
-			int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING;
+			int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING + TEXT_HEIGHT;
 			guiGraphics.drawString(font, ADC_TIME_TEXT, SQUARE_SIZE, yBase + TEXT_PADDING, ARGB_WHITE);
 		}
 	}
