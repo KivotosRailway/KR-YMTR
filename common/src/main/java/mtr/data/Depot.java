@@ -285,6 +285,16 @@ public class Depot extends AreaBase implements IReducedSaveData {
 			try {
 				final List<PathData> tempPath = new ArrayList<>();
 				final int successfulSegmentsMain = PathFinder.findPath(tempPath, rails, platformsInRoute, 1, cruisingAltitude, useFastSpeed);
+
+				for (PathData pathData : tempPath) {
+					if (pathData.savedRailBaseId != 0 && pathData.dwellTime > 0) {
+						Platform platform = dataCache.platformIdMap.get(pathData.savedRailBaseId);
+						if (platform != null) {
+							pathData.adcTime = platform.getAdcTime();
+						}
+					}
+				}
+
 				final int[] successfulSegments = new int[]{Integer.MAX_VALUE};
 
 				sidings.forEach(siding -> {

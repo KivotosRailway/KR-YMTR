@@ -19,7 +19,7 @@ public class PathData extends SerializedDataBase {
 	public final Rail rail;
 	public final long savedRailBaseId;
 	public final int dwellTime;
-	public final int adcTime;
+	public int adcTime;
 	public final int stopIndex;
 
 	public final BlockPos startingPos;
@@ -41,6 +41,10 @@ public class PathData extends SerializedDataBase {
 		this.startingPos = startingPos;
 		this.endingPos = endingPos;
 		this.stopIndex = stopIndex;
+	}
+
+	public PathData(Rail rail, long savedRailBaseId, int dwellTime, BlockPos startingPos, BlockPos endingPos, int stopIndex) {
+		this(rail, savedRailBaseId, dwellTime, 0, startingPos, endingPos, stopIndex);
 	}
 
 	public PathData(Map<String, Value> map) {

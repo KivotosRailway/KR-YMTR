@@ -348,6 +348,7 @@
 	"gui.mtr.platform": "%s站台",
 	"gui.mtr.platform_number": "站台号码",
 	"gui.mtr.platform_or_siding_exists": "每个铁轨节点只能连接到一个站台或侧线",
+	"gui.mtr.predictive_braking": "提前减速",
 	"gui.mtr.press_to_select_floor": "按%s选择楼层",
 	"gui.mtr.psd_apg_door_locked": "门已锁定",
 	"gui.mtr.psd_apg_door_unlocked": "门已解锁",
