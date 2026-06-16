@@ -32,7 +32,7 @@ public class PlatformScreen extends SavedRailScreenBase<Platform> {
 		UtilitiesClient.setWidgetY(sliderDwellTimeMin, SQUARE_SIZE * 5 / 2 + TEXT_FIELD_PADDING);
 		UtilitiesClient.setWidgetY(sliderDwellTimeSec, SQUARE_SIZE * 3 + TEXT_FIELD_PADDING);
 
-		int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING + TEXT_HEIGHT;
+		int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING + TEXT_HEIGHT * 2;
 		UtilitiesClient.setWidgetX(sliderAdcTimeMin, SQUARE_SIZE + textWidth);
 		sliderAdcTimeMin.setHeight(SQUARE_SIZE / 2);
 		sliderAdcTimeMin.setWidth(width - textWidth - SQUARE_SIZE * 2 - sliderTextWidth);
@@ -56,7 +56,7 @@ public class PlatformScreen extends SavedRailScreenBase<Platform> {
 		super.render(guiGraphics, mouseX, mouseY, delta);
 		if (showScheduleControls) {
 			guiGraphics.drawString(font, DWELL_TIME_TEXT, SQUARE_SIZE, SQUARE_SIZE * 5 / 2 + TEXT_FIELD_PADDING + TEXT_PADDING, ARGB_WHITE);
-			int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING + TEXT_HEIGHT;
+			int yBase = SQUARE_SIZE * 4 + TEXT_FIELD_PADDING + TEXT_HEIGHT * 2;
 			guiGraphics.drawString(font, ADC_TIME_TEXT, SQUARE_SIZE, yBase + TEXT_PADDING, ARGB_WHITE);
 		}
 	}
