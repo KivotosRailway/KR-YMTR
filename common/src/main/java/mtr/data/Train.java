@@ -517,11 +517,6 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							final int checkIndex = getIndex(0, spacing, true) + 1;
 							if (isRailBlocked(checkIndex)) {
 								nextStoppingIndex = checkIndex - 1;
-							} else if (nextPlatformIndex > 0 && nextPlatformIndex < path.size()) {
-								nextStoppingIndex = nextPlatformIndex;
-								if (manualNotch < -2) {
-									manualNotch = 0;
-								}
 							}
 						}
 
@@ -589,7 +584,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						} else {
 							int newIndex = -1;
 							for (int i = nextStoppingIndex + 1; i < path.size(); i++) {
-								if (distances.get(i) > railProgress && (path.get(i).dwellTime > 0 || i == path.size() - 1)) {
+								if (distances.get(i) > railProgress && (path.get(i).dwellTime > 0 || i == path.size() - 1 || (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1))))) {
 									newIndex = i;
 									if (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1))) {
 										break;
