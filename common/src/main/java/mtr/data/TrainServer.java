@@ -35,7 +35,7 @@ public class TrainServer extends Train {
 
 	private final List<Siding.TimeSegment> timeSegments;
 
-	private static final int TRAIN_UPDATE_DISTANCE = 128;
+	private static final int TRAIN_UPDATE_DISTANCE = 512;
 	private static final int TICKS_TO_SEND_RAIL_PROGRESS = 40;
 
 	public TrainServer(long id, long sidingId, float railLength, String trainId, String baseTrainType, int trainCars, List<PathData> path, List<Double> distances, int repeatIndex1, int repeatIndex2, float accelerationConstant, List<Siding.TimeSegment> timeSegments, boolean isManual, int maxManualSpeed, int manualToAutomaticTime) {

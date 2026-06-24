@@ -2,11 +2,16 @@ package mtr.render;
 
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.Tesselator;
+import mtr.client.IDrawing;
 import mtr.data.*;
+import mtr.mappings.UtilitiesClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
+import org.joml.Matrix4f;
 
 public class RenderDrivingOverlay implements IGui {
 
@@ -16,6 +21,8 @@ public class RenderDrivingOverlay implements IGui {
 	private static final int EDGE_PADDING = 16;
 	private static final int TOOL_SIZE = 96;
 	private static final int RADIUS = TOOL_SIZE / 2;
+	private static final int SPEEDOMETER_CIRCLE_INTERVAL = 3;
+	private static final double SPEEDOMETER_CIRCLE_EDGE_LENGTH = Math.tan(Math.toRadians(SPEEDOMETER_CIRCLE_INTERVAL) / 2) * TOOL_SIZE + 0.5;
 	private static final int SPEEDOMETER_START_ANGLE = -60;
 	private static final int SPEEDOMETER_SPAN = 300;
 	private static final int SPEEDOMETER_TICK_INTERVAL = 5;
@@ -93,8 +100,21 @@ public class RenderDrivingOverlay implements IGui {
 		final int maxSpeedKmh = trainClient.getMaxManualSpeedKmh();
 
 		RenderSystem.enableBlend();
-		drawFilledCircle(guiGraphics, 0, 0, RADIUS, 0xFF222222);
-		drawCircleBorder(guiGraphics, 0, 0, RADIUS, 1, 0xFFAAAAAA);
+		final Tesselator tesselator = Tesselator.getInstance();
+		final BufferBuilder buffer = tesselator.getBuilder();
+		final float halfEdge = (float) SPEEDOMETER_CIRCLE_EDGE_LENGTH / 2;
+
+		matrixStack.pushPose();
+		for (int i = 0; i < 180; i += SPEEDOMETER_CIRCLE_INTERVAL) {
+			final Matrix4f pose = matrixStack.last().pose();
+			UtilitiesClient.beginDrawingRectangle(buffer);
+			drawRectangle(buffer, pose, -RADIUS, -halfEdge, RADIUS, halfEdge, 0xFFAAAAAA);
+			drawRectangle(buffer, pose, -RADIUS + 1, -halfEdge, RADIUS - 1, halfEdge, 0xFF222222);
+			tesselator.end();
+			UtilitiesClient.finishDrawingRectangle();
+			matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(SPEEDOMETER_CIRCLE_INTERVAL));
+		}
+		matrixStack.popPose();
 
 		matrixStack.pushPose();
 		matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(SPEEDOMETER_START_ANGLE));
@@ -124,7 +144,11 @@ public class RenderDrivingOverlay implements IGui {
 		matrixStack.pushPose();
 		final float needleAngle = SPEEDOMETER_START_ANGLE + (float) speedKmh * SPEEDOMETER_SPAN / maxSpeedKmh;
 		matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(needleAngle));
-		guiGraphics.fill(-RADIUS + 4, -1, 0, 1, RED_COLOR);
+		final Matrix4f needlePose = matrixStack.last().pose();
+		UtilitiesClient.beginDrawingRectangle(buffer);
+		drawRectangle(buffer, needlePose, -RADIUS + 4, -1, 0, 1, RED_COLOR);
+		tesselator.end();
+		UtilitiesClient.finishDrawingRectangle();
 		matrixStack.popPose();
 
 		guiGraphics.fill(-2, -2, 2, 2, 0xFFFFFFFF);
@@ -220,24 +244,14 @@ public class RenderDrivingOverlay implements IGui {
 		guiGraphics.drawString(client.font, text, -width / 2, -client.font.lineHeight / 2, color, false);
 	}
 
-	private static void drawFilledCircle(GuiGraphics guiGraphics, int centerX, int centerY, int radius, int color) {
-		final int r2 = radius * radius;
-		for (int y = -radius; y <= radius; y++) {
-			final int xLimit = (int) Math.sqrt(r2 - y * y);
-			guiGraphics.fill(centerX - xLimit, centerY + y, centerX + xLimit, centerY + y + 1, color);
-		}
-	}
-
-	private static void drawCircleBorder(GuiGraphics guiGraphics, int centerX, int centerY, int radius, int thickness, int color) {
-		final int r2Outer = (radius + thickness) * (radius + thickness);
-		final int r2Inner = (radius - thickness) * (radius - thickness);
-		for (int y = -radius - thickness; y <= radius + thickness; y++) {
-			for (int x = -radius - thickness; x <= radius + thickness; x++) {
-				final int dist2 = x * x + y * y;
-				if (dist2 >= r2Inner && dist2 <= r2Outer) {
-					guiGraphics.fill(centerX + x, centerY + y, centerX + x + 1, centerY + y + 1, color);
-				}
-			}
-		}
+	private static void drawRectangle(BufferBuilder buffer, Matrix4f pose, float x1, float y1, float x2, float y2, int color) {
+		final int a = (color >> 24) & 0xFF;
+		final int r = (color >> 16) & 0xFF;
+		final int g = (color >> 8) & 0xFF;
+		final int b = color & 0xFF;
+		buffer.vertex(pose, x1, y1, 0).color(r, g, b, a).endVertex();
+		buffer.vertex(pose, x1, y2, 0).color(r, g, b, a).endVertex();
+		buffer.vertex(pose, x2, y2, 0).color(r, g, b, a).endVertex();
+		buffer.vertex(pose, x2, y1, 0).color(r, g, b, a).endVertex();
 	}
 }

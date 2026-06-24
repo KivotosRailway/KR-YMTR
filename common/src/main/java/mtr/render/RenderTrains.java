@@ -130,14 +130,18 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 		final float newLastFrameDuration = client.isPaused() || lastRenderedTick == MTRClient.getGameTick() ? 0 : lastFrameDuration;
 		final boolean useAnnouncements = Config.useTTSAnnouncements() || Config.showAnnouncementMessages();
 
+		final int configuredDistance = Config.getTrainRenderDistanceBlocks();
 		if (Config.useDynamicFPS()) {
+			if (maxTrainRenderDistance <= 0 || maxTrainRenderDistance > configuredDistance) {
+				maxTrainRenderDistance = configuredDistance;
+			}
 			if (lastFrameDuration > 0.5) {
 				maxTrainRenderDistance = Math.max(maxTrainRenderDistance - (maxTrainRenderDistance - DETAIL_RADIUS) / 2, DETAIL_RADIUS);
-			} else if (lastFrameDuration < 0.4) {
-				maxTrainRenderDistance = Math.min(maxTrainRenderDistance + 1, Config.getTrainRenderDistanceBlocks());
+			} else if (maxTrainRenderDistance < configuredDistance && lastFrameDuration < 0.4) {
+				maxTrainRenderDistance = Math.min(maxTrainRenderDistance + 1, configuredDistance);
 			}
 		} else {
-			maxTrainRenderDistance = Config.getTrainRenderDistanceBlocks();
+			maxTrainRenderDistance = configuredDistance;
 		}
 
 		if (!backupRendering) {
