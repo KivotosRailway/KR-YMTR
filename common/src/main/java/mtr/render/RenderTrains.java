@@ -134,10 +134,10 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 			if (lastFrameDuration > 0.5) {
 				maxTrainRenderDistance = Math.max(maxTrainRenderDistance - (maxTrainRenderDistance - DETAIL_RADIUS) / 2, DETAIL_RADIUS);
 			} else if (lastFrameDuration < 0.4) {
-				maxTrainRenderDistance = Math.min(maxTrainRenderDistance + 1, renderDistanceChunks * (Config.trainRenderDistanceRatio() + 1));
+				maxTrainRenderDistance = Math.min(maxTrainRenderDistance + 1, Config.getTrainRenderDistanceBlocks());
 			}
 		} else {
-			maxTrainRenderDistance = renderDistanceChunks * (Config.trainRenderDistanceRatio() + 1);
+			maxTrainRenderDistance = Config.getTrainRenderDistanceBlocks();
 		}
 
 		if (!backupRendering) {

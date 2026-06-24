@@ -570,7 +570,7 @@
 	"options.mtr.use_dynamic_fps": "Dynamically boost FPS",
 	"options.mtr.use_mtr_font": "Use custom MTR fonts (might not work on some computers)",
 	"options.mtr.use_tts_announcements": "Enable \"next station\" text-to-speech announcements",
-	"options.mtr.vehicle_render_distance_ratio": "Vehicle rendering to Minecraft render distance ratio",
+	"options.mtr.vehicle_render_distance_ratio": "Vehicle render distance",
 	"sign.mtr.airport": "Airport",
 	"sign.mtr.airport_arrivals": "Arrivals",
 	"sign.mtr.airport_arrivals_cjk": "抵港",

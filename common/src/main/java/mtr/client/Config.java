@@ -25,12 +25,14 @@ public class Config {
 	private static boolean useDynamicFPS = true;
 	private static int trackTextureOffset;
 	private static int dynamicTextureResolution = 2;
-	private static int trainRenderDistanceRatio = 7;
+	private static int trainRenderDistance = 7;
+	private static final int DEFAULT_TRAIN_RENDER_DISTANCE = 7;
 
 	public static final List<Patreon> PATREON_LIST = new ArrayList<>();
 	public static final int TRACK_OFFSET_COUNT = 32;
 	public static final int DYNAMIC_RESOLUTION_COUNT = 8;
-	public static final int TRAIN_RENDER_DISTANCE_RATIO_COUNT = 16;
+	public static final int TRAIN_RENDER_DISTANCE_COUNT = 16;
+	private static final int TRAIN_RENDER_DISTANCE_STEP = 32;
 	private static final Path CONFIG_FILE_PATH = Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve("mtr.json");
 	private static final String USE_MTR_FONT_KEY = "use_mtr_font";
 	private static final String SHOW_ANNOUNCEMENT_MESSAGES = "show_announcement_messages";
@@ -41,7 +43,7 @@ public class Config {
 	private static final String USE_TTS_ANNOUNCEMENTS = "use_tts_announcements";
 	private static final String TRACK_TEXTURE_OFFSET = "track_texture_offset";
 	private static final String DYNAMIC_TEXTURE_RESOLUTION = "dynamic texture resolution";
-	private static final String TRAIN_RENDER_DISTANCE_RATIO = "train_render_distance_ratio";
+	private static final String TRAIN_RENDER_DISTANCE = "train_render_distance";
 
 	public static boolean useMTRFont() {
 		return useMTRFont;
@@ -83,8 +85,12 @@ public class Config {
 		return dynamicTextureResolution;
 	}
 
-	public static int trainRenderDistanceRatio() {
-		return trainRenderDistanceRatio;
+	public static int trainRenderDistance() {
+		return trainRenderDistance;
+	}
+
+	public static int getTrainRenderDistanceBlocks() {
+		return (trainRenderDistance + 1) * TRAIN_RENDER_DISTANCE_STEP;
 	}
 
 	public static boolean setUseMTRFont(boolean value) {
@@ -145,8 +151,8 @@ public class Config {
 		writeToFile();
 	}
 
-	public static void setTrainRenderDistanceRatio(int value) {
-		trainRenderDistanceRatio = Mth.clamp(value, 0, TRAIN_RENDER_DISTANCE_RATIO_COUNT - 1);
+	public static void setTrainRenderDistance(int value) {
+		trainRenderDistance = Mth.clamp(value, 0, TRAIN_RENDER_DISTANCE_COUNT - 1);
 		writeToFile();
 	}
 
@@ -191,7 +197,7 @@ public class Config {
 			} catch (Exception ignored) {
 			}
 			try {
-				trainRenderDistanceRatio = Mth.clamp(jsonConfig.get(TRAIN_RENDER_DISTANCE_RATIO).getAsInt(), 0, TRAIN_RENDER_DISTANCE_RATIO_COUNT - 1);
+				trainRenderDistance = Mth.clamp(jsonConfig.get(TRAIN_RENDER_DISTANCE).getAsInt(), 0, TRAIN_RENDER_DISTANCE_COUNT - 1);
 			} catch (Exception ignored) {
 			}
 		} catch (Exception e) {
@@ -212,7 +218,7 @@ public class Config {
 		jsonConfig.addProperty(LANGUAGE_OPTIONS, languageOptions);
 		jsonConfig.addProperty(TRACK_TEXTURE_OFFSET, trackTextureOffset);
 		jsonConfig.addProperty(DYNAMIC_TEXTURE_RESOLUTION, dynamicTextureResolution);
-		jsonConfig.addProperty(TRAIN_RENDER_DISTANCE_RATIO, trainRenderDistanceRatio);
+		jsonConfig.addProperty(TRAIN_RENDER_DISTANCE, trainRenderDistance);
 
 		try {
 			Files.write(CONFIG_FILE_PATH, Collections.singleton(RailwayData.prettyPrint(jsonConfig)));

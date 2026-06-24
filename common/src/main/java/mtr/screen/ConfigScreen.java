@@ -96,7 +96,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 		});
 		sliderTrackTextureOffset = new WidgetShorterSlider(0, 0, Config.TRACK_OFFSET_COUNT - 1, Object::toString, null);
 		sliderDynamicTextureResolution = new WidgetShorterSlider(0, 0, Config.DYNAMIC_RESOLUTION_COUNT - 1, Object::toString, null);
-		sliderTrainRenderDistanceRatio = new WidgetShorterSlider(0, 0, Config.TRAIN_RENDER_DISTANCE_RATIO_COUNT - 1, num -> String.format("%d%%", (num + 1) * 100 / Config.TRAIN_RENDER_DISTANCE_RATIO_COUNT), null);
+		sliderTrainRenderDistanceRatio = new WidgetShorterSlider(0, 0, Config.TRAIN_RENDER_DISTANCE_COUNT - 1, num -> (num + 1) * 32 + "m", null);
 		buttonSupportPatreon = UtilitiesClient.newButton(BUTTON_HEIGHT, Text.literal(""), button -> Util.getPlatform().openUri("https://www.patreon.com/minecraft_transit_railway"));
 	}
 
@@ -150,7 +150,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 		sliderDynamicTextureResolution.setHeight(BUTTON_HEIGHT);
 		sliderDynamicTextureResolution.setValue(Config.dynamicTextureResolution());
 		sliderTrainRenderDistanceRatio.setHeight(BUTTON_HEIGHT);
-		sliderTrainRenderDistanceRatio.setValue(Config.trainRenderDistanceRatio());
+		sliderTrainRenderDistanceRatio.setValue(Config.trainRenderDistance());
 		buttonSupportPatreon.setMessage(Text.translatable("gui.mtr.support"));
 
 		if (hasTimeAndWindControls) {
@@ -231,7 +231,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 		super.onClose();
 		Config.setTrackTextureOffset(sliderTrackTextureOffset.getIntValue());
 		Config.setDynamicTextureResolution(sliderDynamicTextureResolution.getIntValue());
-		Config.setTrainRenderDistanceRatio(sliderTrainRenderDistanceRatio.getIntValue());
+		Config.setTrainRenderDistance(sliderTrainRenderDistanceRatio.getIntValue());
 		ClientData.DATA_CACHE.sync();
 		ClientData.DATA_CACHE.refreshDynamicResources();
 		ClientData.SIGNAL_BLOCKS.writeCache();

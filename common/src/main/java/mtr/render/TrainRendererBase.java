@@ -88,7 +88,7 @@ public abstract class TrainRendererBase {
 		final Vec3 cameraPos = cameraEntity == null ? null : cameraEntity.position();
 		final BlockPos posAverage = RailwayData.newBlockPos(x + (noOffset || cameraPos == null ? 0 : cameraPos.x), y + (noOffset || cameraPos == null ? 0 : cameraPos.y), z + (noOffset || cameraPos == null ? 0 : cameraPos.z));
 
-		if (RenderTrains.shouldNotRender(posAverage, UtilitiesClient.getRenderDistance() * (Config.trainRenderDistanceRatio() + 1), null)) {
+		if (RenderTrains.shouldNotRender(posAverage, Config.getTrainRenderDistanceBlocks(), null)) {
 			return null;
 		}
 
