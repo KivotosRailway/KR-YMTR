@@ -263,10 +263,6 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 		}
 	}
 
-	/**
-	 * 旧签名重载，向后兼容 MTR3-4 等使用 Mixin 注入 onClose() 中 setUnlimitedTrains 调用点的第三方模组。
-	 * 调用前需先通过 {@link #setEnablePredictiveBraking(boolean)} 设置 enablePredictiveBraking 字段。
-	 */
 	public void setUnlimitedTrains(boolean unlimitedTrains, int maxTrains, boolean isManual, int maxManualSpeed, float accelerationConstant, int newDwellTime, boolean clearTrains, Consumer<FriendlyByteBuf> sendPacket) {
 		setUnlimitedTrains(unlimitedTrains, maxTrains, isManual, maxManualSpeed, enablePredictiveBraking, accelerationConstant, newDwellTime, clearTrains, sendPacket);
 	}
