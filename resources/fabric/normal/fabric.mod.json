@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "mtr",
-	"version": "1.20-3.2.2-hotfix-1",
+	"version": "${version}",
 	"name": "Yomi's Minecraft Transit Railway",
 	"description": "A Minecraft mod that adds automated train systems into the game.",
 	"authors": [

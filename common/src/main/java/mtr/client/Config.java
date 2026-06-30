@@ -31,8 +31,13 @@ public class Config {
 	public static final List<Patreon> PATREON_LIST = new ArrayList<>();
 	public static final int TRACK_OFFSET_COUNT = 32;
 	public static final int DYNAMIC_RESOLUTION_COUNT = 8;
-	public static final int TRAIN_RENDER_DISTANCE_COUNT = 16;
+	public static final int TRAIN_RENDER_DISTANCE_COUNT = 32;
 	private static final int TRAIN_RENDER_DISTANCE_STEP = 32;
+
+	private static int railRenderDistance = 7;
+	private static final int DEFAULT_RAIL_RENDER_DISTANCE = 7;
+	public static final int RAIL_RENDER_DISTANCE_COUNT = 64;
+	private static final int RAIL_RENDER_DISTANCE_STEP = 32;
 	private static final Path CONFIG_FILE_PATH = Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve("mtr.json");
 	private static final String USE_MTR_FONT_KEY = "use_mtr_font";
 	private static final String SHOW_ANNOUNCEMENT_MESSAGES = "show_announcement_messages";
@@ -44,6 +49,7 @@ public class Config {
 	private static final String TRACK_TEXTURE_OFFSET = "track_texture_offset";
 	private static final String DYNAMIC_TEXTURE_RESOLUTION = "dynamic texture resolution";
 	private static final String TRAIN_RENDER_DISTANCE = "train_render_distance";
+	private static final String RAIL_RENDER_DISTANCE = "rail_render_distance";
 
 	public static boolean useMTRFont() {
 		return useMTRFont;
@@ -91,6 +97,14 @@ public class Config {
 
 	public static int getTrainRenderDistanceBlocks() {
 		return (trainRenderDistance + 1) * TRAIN_RENDER_DISTANCE_STEP;
+	}
+
+	public static int railRenderDistance() {
+		return railRenderDistance;
+	}
+
+	public static int getRailRenderDistanceBlocks() {
+		return (railRenderDistance + 1) * RAIL_RENDER_DISTANCE_STEP;
 	}
 
 	public static boolean setUseMTRFont(boolean value) {
@@ -156,6 +170,11 @@ public class Config {
 		writeToFile();
 	}
 
+	public static void setRailRenderDistance(int value) {
+		railRenderDistance = Mth.clamp(value, 0, RAIL_RENDER_DISTANCE_COUNT - 1);
+		writeToFile();
+	}
+
 	public static void refreshProperties() {
 		System.out.println("Refreshed MTR mod config");
 		try {
@@ -200,6 +219,10 @@ public class Config {
 				trainRenderDistance = Mth.clamp(jsonConfig.get(TRAIN_RENDER_DISTANCE).getAsInt(), 0, TRAIN_RENDER_DISTANCE_COUNT - 1);
 			} catch (Exception ignored) {
 			}
+			try {
+				railRenderDistance = Mth.clamp(jsonConfig.get(RAIL_RENDER_DISTANCE).getAsInt(), 0, RAIL_RENDER_DISTANCE_COUNT - 1);
+			} catch (Exception ignored) {
+			}
 		} catch (Exception e) {
 			writeToFile();
 			e.printStackTrace();
@@ -219,6 +242,7 @@ public class Config {
 		jsonConfig.addProperty(TRACK_TEXTURE_OFFSET, trackTextureOffset);
 		jsonConfig.addProperty(DYNAMIC_TEXTURE_RESOLUTION, dynamicTextureResolution);
 		jsonConfig.addProperty(TRAIN_RENDER_DISTANCE, trainRenderDistance);
+		jsonConfig.addProperty(RAIL_RENDER_DISTANCE, railRenderDistance);
 
 		try {
 			Files.write(CONFIG_FILE_PATH, Collections.singleton(RailwayData.prettyPrint(jsonConfig)));

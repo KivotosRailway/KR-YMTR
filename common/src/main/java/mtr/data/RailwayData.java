@@ -72,7 +72,7 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 	private final Map<Long, List<ScheduleEntry>> schedulesForPlatform = new HashMap<>();
 	private final Map<Long, Map<BlockPos, TrainDelay>> trainDelays = new HashMap<>();
 
-	private static final int RAIL_UPDATE_DISTANCE = 128;
+	private static final int RAIL_UPDATE_DISTANCE = 2112;
 	private static final int PLAYER_MOVE_UPDATE_THRESHOLD = 16;
 	private static final int SCHEDULE_UPDATE_TICKS = 60;
 

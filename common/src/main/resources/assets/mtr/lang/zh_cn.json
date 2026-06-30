@@ -561,6 +561,7 @@
 	"options.mtr.use_mtr_font": "使用自定义MTR字体（在一些电脑上可能无法使用）",
 	"options.mtr.use_tts_announcements": "使用文字转语音「下一站」广播",
 	"options.mtr.vehicle_render_distance_ratio": "车辆渲染距离",
+	"options.mtr.rail_render_distance": "轨道渲染距离",
 	"sign.mtr.airport": "Airport",
 	"sign.mtr.airport_arrivals": "Arrivals",
 	"sign.mtr.airport_arrivals_cjk": "抵港",
