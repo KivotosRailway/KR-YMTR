@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "mtr"
-version = "${version}"
+version = "1.20-3.2.2-hotfix-1"
 displayName = "Yomi's Minecraft Transit Railway"
 authors = "Jonathan Ho"
 description = "A Minecraft mod that adds automated train systems into the game."
