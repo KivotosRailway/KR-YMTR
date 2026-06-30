@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IGui {
 
 	public static int maxTrainRenderDistance;
+	public static int maxRailRenderDistance;
 	public static ResourcePackCreatorProperties creatorProperties = new ResourcePackCreatorProperties();
 
 	private static float lastRenderedTick;
@@ -125,7 +126,6 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 			renderedUuid = entity.getUUID();
 		}
 
-		final int renderDistanceChunks = UtilitiesClient.getRenderDistance();
 		final float lastFrameDuration = MTRClient.getLastFrameDuration();
 		final float newLastFrameDuration = client.isPaused() || lastRenderedTick == MTRClient.getGameTick() ? 0 : lastFrameDuration;
 		final boolean useAnnouncements = Config.useTTSAnnouncements() || Config.showAnnouncementMessages();
@@ -143,6 +143,8 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 		} else {
 			maxTrainRenderDistance = configuredDistance;
 		}
+
+		maxRailRenderDistance = Config.getRailRenderDistanceBlocks();
 
 		if (!backupRendering) {
 			matrices.popPose();
@@ -269,7 +271,7 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 		}, newLastFrameDuration));
 
 		final boolean renderColors = isHoldingRailRelated(player);
-		final int maxRailDistance = renderDistanceChunks * 16;
+		final int maxRailDistance = maxRailRenderDistance;
 		final Map<UUID, RailType> renderedRailMap = new HashMap<>();
 		ClientData.RAILS.forEach((startPos, railMap) -> railMap.forEach((endPos, rail) -> {
 			if (!RailwayData.isBetween(player.getX(), startPos.getX(), endPos.getX(), maxRailDistance) || !RailwayData.isBetween(player.getZ(), startPos.getZ(), endPos.getZ(), maxRailDistance)) {
@@ -490,7 +492,7 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	}
 
 	private static void renderRailStandard(Level world, Rail rail, float yOffset, boolean renderColors, float railWidth, String texture, float u1, float v1, float u2, float v2) {
-		final int maxRailDistance = UtilitiesClient.getRenderDistance() * 16;
+		final int maxRailDistance = maxRailRenderDistance;
 
 		rail.render((x1, z1, x2, z2, x3, z3, x4, z4, y1, y2) -> {
 			final BlockPos pos2 = RailwayData.newBlockPos(x1, y1, z1);
@@ -518,7 +520,7 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	}
 
 	private static void renderSignalsStandard(Level world, PoseStack matrices, MultiBufferSource vertexConsumers, Rail rail, BlockPos startPos, BlockPos endPos) {
-		final int maxRailDistance = UtilitiesClient.getRenderDistance() * 16;
+		final int maxRailDistance = maxRailRenderDistance;
 		final List<SignalBlocks.SignalBlock> signalBlocks = ClientData.SIGNAL_BLOCKS.getSignalBlocksAtTrack(PathData.getRailProduct(startPos, endPos));
 		final float width = 1F / DyeColor.values().length;
 
