@@ -23,6 +23,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.entity.vehicle.Minecart;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.StringUtils;
@@ -101,7 +102,7 @@ public class JonModelTrainRenderer extends TrainRendererBase implements IGui {
 
 			if (isBoat) {
 				if (!BOATS.containsKey(train.id)) {
-					BOATS.put(train.id, new FakeBoat());
+					BOATS.put(train.id, new FakeBoat(world));
 				}
 				MODEL_BOAT.setupAnim(BOATS.get(train.id), (train.getSpeed() + Train.ACCELERATION_DEFAULT) * (doorLeftValue == 0 && doorRightValue == 0 ? lastFrameDuration : 0), 0, -0.1F, 0, 0);
 			} else {
@@ -239,17 +240,23 @@ public class JonModelTrainRenderer extends TrainRendererBase implements IGui {
 	}
 
 	private static class FakeBoat extends Boat {
-
 		private float progress;
+		private final Level level;
 
-		public FakeBoat() {
-			super(EntityType.BOAT, null);
+		public FakeBoat(Level level) {
+			super(EntityType.BOAT, level);
+			this.level = level;
 		}
 
 		@Override
 		public float getRowingTime(int paddle, float newProgress) {
 			progress += newProgress;
 			return progress;
+		}
+
+		@Override
+		public Level level() {
+			return level;
 		}
 	}
 }

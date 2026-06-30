@@ -145,6 +145,9 @@ public class ForgeUtilities {
 		@SubscribeEvent
 		public static void onRegisterCreativeModeTabsEvent(BuildCreativeModeTabContentsEvent event) {
 			CREATIVE_TABS.forEach((resourceLocation, creativeModeTabWrapper) -> {
+				if (creativeModeTabWrapper.creativeModeTab == null) {
+					return;
+				}
 				if (creativeModeTabWrapper.creativeModeTab.getDisplayName().equals(event.getTab().getDisplayName())) {
 					creativeModeTabWrapper.items.forEach(item -> event.getEntries().put(new ItemStack(item), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS));
 				}

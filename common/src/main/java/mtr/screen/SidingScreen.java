@@ -217,7 +217,8 @@ public class SidingScreen extends SavedRailScreenBase<Siding> implements Icons {
 		final int minutes = sliderDwellTimeMin.getIntValue();
 		final float second = sliderDwellTimeSec.getIntValue() / 2F;
 		final int dwellTime = (int) ((second + minutes * SECONDS_PER_MINUTE) * 2);
-		savedRailBase.setUnlimitedTrains(buttonUnlimitedTrains.selected(), maxTrains, isManual, maxManualSpeed, enablePredictiveBraking, accelerationConstant, dwellTime, oldAcceleration != accelerationConstant || oldIsManual != isManual || oldMaxManualSpeed != maxManualSpeed || oldDwellTime != dwellTime, packet -> PacketTrainDataGuiClient.sendUpdate(getPacketIdentifier(), packet));
+		savedRailBase.setEnablePredictiveBraking(enablePredictiveBraking);
+		savedRailBase.setUnlimitedTrains(buttonUnlimitedTrains.selected(), maxTrains, isManual, maxManualSpeed, accelerationConstant, dwellTime, oldAcceleration != accelerationConstant || oldIsManual != isManual || oldMaxManualSpeed != maxManualSpeed || oldDwellTime != dwellTime, packet -> PacketTrainDataGuiClient.sendUpdate(getPacketIdentifier(), packet));
 		super.onClose();
 	}
 
