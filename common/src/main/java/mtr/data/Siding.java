@@ -383,8 +383,6 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 					path.addAll(tempPath);
 				}
 
-				pathSwodNeedsSync = true;
-
 				timeSegments.clear();
 				timeSegments.addAll(tempTimeSegments);
 				platformTimes.clear();
