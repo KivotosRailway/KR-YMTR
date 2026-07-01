@@ -24,6 +24,7 @@ public final class Route extends NameColorDataBase implements IGui {
 
 	private static final String KEY_PLATFORM_IDS = "platform_ids";
 	private static final String KEY_CUSTOM_DESTINATIONS = "custom_destinations";
+	private static final String KEY_STOP_WITHOUT_OPENING_DOORS = "stop_without_opening_doors";
 	private static final String KEY_ROUTE_TYPE = "route_type";
 	private static final String KEY_IS_LIGHT_RAIL_ROUTE = "is_light_rail_route";
 	private static final String KEY_LIGHT_RAIL_ROUTE_NUMBER = "light_rail_route_number";
@@ -56,8 +57,16 @@ public final class Route extends NameColorDataBase implements IGui {
 		final List<String> customDestinations = new ArrayList<>();
 		messagePackHelper.iterateArrayValue(KEY_CUSTOM_DESTINATIONS, customDestination -> customDestinations.add(customDestination.asStringValue().asString()));
 
+		final List<Boolean> stopWithoutOpeningDoorsList = new ArrayList<>();
+		if (map.containsKey(KEY_STOP_WITHOUT_OPENING_DOORS)) {
+			messagePackHelper.iterateArrayValue(KEY_STOP_WITHOUT_OPENING_DOORS, value -> stopWithoutOpeningDoorsList.add(value.asBooleanValue().getBoolean()));
+		}
+
 		for (int i = 0; i < Math.min(platformIds.size(), customDestinations.size()); i++) {
 			platformIds.get(i).customDestination = customDestinations.get(i);
+		}
+		for (int i = 0; i < Math.min(platformIds.size(), stopWithoutOpeningDoorsList.size()); i++) {
+			platformIds.get(i).stopWithoutOpeningDoors = stopWithoutOpeningDoorsList.get(i);
 		}
 
 		routeType = EnumHelper.valueOf(RouteType.NORMAL, messagePackHelper.getString(KEY_ROUTE_TYPE));
@@ -94,6 +103,7 @@ public final class Route extends NameColorDataBase implements IGui {
 		for (int i = 0; i < platformCount; i++) {
 			final RoutePlatform routePlatform = new RoutePlatform(packet.readLong());
 			routePlatform.customDestination = packet.readUtf(PACKET_STRING_READ_LENGTH);
+			routePlatform.stopWithoutOpeningDoors = packet.readBoolean();
 			platformIds.add(routePlatform);
 		}
 
@@ -119,6 +129,11 @@ public final class Route extends NameColorDataBase implements IGui {
 			messagePacker.packString(routePlatform.customDestination);
 		}
 
+		messagePacker.packString(KEY_STOP_WITHOUT_OPENING_DOORS).packArrayHeader(platformIds.size());
+		for (final RoutePlatform routePlatform : platformIds) {
+			messagePacker.packBoolean(routePlatform.stopWithoutOpeningDoors);
+		}
+
 		messagePacker.packString(KEY_ROUTE_TYPE).packString(routeType.toString());
 		messagePacker.packString(KEY_IS_LIGHT_RAIL_ROUTE).packBoolean(isLightRailRoute);
 		messagePacker.packString(KEY_IS_ROUTE_HIDDEN).packBoolean(isHidden);
@@ -129,7 +144,7 @@ public final class Route extends NameColorDataBase implements IGui {
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 8;
+		return super.messagePackLength() + 9;
 	}
 
 	@Override
@@ -139,6 +154,7 @@ public final class Route extends NameColorDataBase implements IGui {
 		platformIds.forEach(routePlatform -> {
 			packet.writeLong(routePlatform.platformId);
 			packet.writeUtf(routePlatform.customDestination);
+			packet.writeBoolean(routePlatform.stopWithoutOpeningDoors);
 		});
 
 		packet.writeUtf(routeType.toString());
@@ -158,6 +174,7 @@ public final class Route extends NameColorDataBase implements IGui {
 				for (int i = 0; i < platformCount; i++) {
 					final RoutePlatform routePlatform = new RoutePlatform(packet.readLong());
 					routePlatform.customDestination = packet.readUtf(PACKET_STRING_READ_LENGTH);
+					routePlatform.stopWithoutOpeningDoors = packet.readBoolean();
 					platformIds.add(routePlatform);
 				}
 				break;
@@ -191,8 +208,14 @@ public final class Route extends NameColorDataBase implements IGui {
 		platformIds.forEach(routePlatform -> {
 			packet.writeLong(routePlatform.platformId);
 			packet.writeUtf(routePlatform.customDestination);
+			packet.writeBoolean(routePlatform.stopWithoutOpeningDoors);
 		});
 		sendPacket.accept(packet);
+	}
+
+	@Deprecated
+	public void setPlatformIds(Consumer<FriendlyByteBuf> sendPacket, boolean legacy) {
+		setPlatformIds(sendPacket);
 	}
 
 	public void setExtraData(Consumer<FriendlyByteBuf> sendPacket) {
@@ -251,11 +274,13 @@ public final class Route extends NameColorDataBase implements IGui {
 	public static class RoutePlatform {
 
 		public String customDestination;
+		public boolean stopWithoutOpeningDoors;
 		public final long platformId;
 
 		public RoutePlatform(long platformId) {
 			this.platformId = platformId;
 			customDestination = "";
+			stopWithoutOpeningDoors = false;
 		}
 	}
 

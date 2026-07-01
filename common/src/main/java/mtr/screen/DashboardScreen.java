@@ -46,6 +46,7 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 
 	private final WidgetBetterTextField textFieldName;
 	private final WidgetBetterTextField textFieldCustomDestination;
+	private final WidgetBetterCheckbox buttonStopWithoutOpeningDoors;
 	private final WidgetColorSelector colorSelector;
 
 	private final DashboardList dashboardList;
@@ -59,6 +60,7 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 
 		textFieldName = new WidgetBetterTextField(Text.translatable("gui.mtr.name").getString());
 		textFieldCustomDestination = new WidgetBetterTextField(Text.translatable("gui.mtr.custom_destination_suggestion").getString());
+		buttonStopWithoutOpeningDoors = new WidgetBetterCheckbox(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.stop_without_opening_doors"), ignored -> {});
 		colorSelector = new WidgetColorSelector(this, true, this::toggleButtons);
 		widgetMap = new WidgetMap(transportMode, this::onDrawCorners, this::onDrawCornersMouseRelease, this::onClickAddPlatformToRoute, this::onClickEditSavedRail, colorSelector::isMouseOver);
 
@@ -114,7 +116,8 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 		IDrawing.setPositionAndWidth(buttonOptions, width - SQUARE_SIZE * 5, bottomRowY, SQUARE_SIZE * 3);
 
 		IDrawing.setPositionAndWidth(textFieldName, TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH - COLOR_WIDTH - TEXT_FIELD_PADDING);
-		IDrawing.setPositionAndWidth(textFieldCustomDestination, TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH - TEXT_FIELD_PADDING);
+		IDrawing.setPositionAndWidth(textFieldCustomDestination, TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH / 2 - TEXT_FIELD_PADDING);
+		IDrawing.setPositionAndWidth(buttonStopWithoutOpeningDoors, PANEL_WIDTH / 2 + TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH / 2 - TEXT_FIELD_PADDING);
 		IDrawing.setPositionAndWidth(colorSelector, PANEL_WIDTH - COLOR_WIDTH + TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, COLOR_WIDTH - TEXT_FIELD_PADDING);
 
 		dashboardList.x = 0;
@@ -141,6 +144,7 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 
 		addDrawableChild(textFieldName);
 		addDrawableChild(textFieldCustomDestination);
+		addDrawableChild(buttonStopWithoutOpeningDoors);
 		addDrawableChild(colorSelector);
 	}
 
@@ -382,7 +386,9 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 	private void startEditingRouteDestination(int index) {
 		editingRoutePlatformIndex = index;
 		if (isValidRoutePlatformIndex()) {
-			textFieldCustomDestination.setValue(editingRoute.platformIds.get(index).customDestination);
+			final Route.RoutePlatform rp = editingRoute.platformIds.get(index);
+			textFieldCustomDestination.setValue(rp.customDestination);
+			buttonStopWithoutOpeningDoors.setChecked(rp.stopWithoutOpeningDoors);
 		}
 		toggleButtons();
 	}
@@ -443,7 +449,9 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 
 	private void onDoneEditingRouteDestination() {
 		if (isValidRoutePlatformIndex()) {
-			editingRoute.platformIds.get(editingRoutePlatformIndex).customDestination = textFieldCustomDestination.getValue();
+			final Route.RoutePlatform rp = editingRoute.platformIds.get(editingRoutePlatformIndex);
+			rp.customDestination = textFieldCustomDestination.getValue();
+			rp.stopWithoutOpeningDoors = buttonStopWithoutOpeningDoors.selected();
 			editingRoute.setPlatformIds(packet -> PacketTrainDataGuiClient.sendUpdate(PACKET_UPDATE_ROUTE, packet));
 		}
 		startEditingRoute(editingRoute, isNew);
@@ -475,6 +483,7 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 		final boolean showTextFields = ((selectedTab == SelectedTab.STATIONS || selectedTab == SelectedTab.DEPOTS) && editingArea != null) || (selectedTab == SelectedTab.ROUTES && editingRoute != null && !showRouteDestinationFields);
 		textFieldName.visible = showTextFields;
 		textFieldCustomDestination.visible = showRouteDestinationFields;
+		buttonStopWithoutOpeningDoors.visible = showRouteDestinationFields;
 		colorSelector.visible = showTextFields;
 		dashboardList.height = height - SQUARE_SIZE * 2 - (showTextFields || showRouteDestinationFields ? SQUARE_SIZE + TEXT_FIELD_PADDING : 0);
 	}

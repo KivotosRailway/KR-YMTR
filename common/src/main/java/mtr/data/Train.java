@@ -530,6 +530,9 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 				} else {
 					if (speed <= 0) {
 						speed = 0;
+						if (isCurrentlyManual && manualNotch <= EB) {
+							manualNotch = B2;
+						}
 
 						final boolean isOppositeRail = isOppositeRail();
 						final boolean railBlocked = isRailBlocked(getIndex(0, spacing, true) + (isOppositeRail ? 2 : 1));

@@ -344,11 +344,26 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 			RailwayData railwayData = RailwayData.getInstance(world);
 			if (railwayData != null) {
 				DataCache dataCache = railwayData.dataCache;
+
+				final Map<Long, Route.RoutePlatform> routePlatformMap = new HashMap<>();
+				if (depot != null) {
+					for (final long routeId : depot.routeIds) {
+						final Route route = dataCache.routeIdMap.get(routeId);
+						if (route != null) {
+							for (final Route.RoutePlatform rp : route.platformIds) {
+								routePlatformMap.put(rp.platformId, rp);
+							}
+						}
+					}
+				}
+
 				for (PathData pd : tempPath) {
 					if (pd.savedRailBaseId != 0 && pd.dwellTime > 0) {
 						Platform platform = dataCache.platformIdMap.get(pd.savedRailBaseId);
 						if (platform != null) {
 							pd.adcTime = platform.getAdcTime();
+							final Route.RoutePlatform rp = routePlatformMap.get(pd.savedRailBaseId);
+							pd.stopWithoutOpeningDoors = rp != null && rp.stopWithoutOpeningDoors;
 						}
 					}
 				}
@@ -367,6 +382,8 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 				} else {
 					path.addAll(tempPath);
 				}
+
+				pathSwodNeedsSync = true;
 
 				timeSegments.clear();
 				timeSegments.addAll(tempTimeSegments);

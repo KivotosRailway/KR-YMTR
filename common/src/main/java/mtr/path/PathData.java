@@ -20,6 +20,7 @@ public class PathData extends SerializedDataBase {
 	public final long savedRailBaseId;
 	public final int dwellTime;
 	public int adcTime;
+	public boolean stopWithoutOpeningDoors;
 	public final int stopIndex;
 
 	public final BlockPos startingPos;
@@ -29,22 +30,28 @@ public class PathData extends SerializedDataBase {
 	private static final String KEY_SAVED_RAIL_BASE_ID = "saved_rail_base_id";
 	private static final String KEY_DWELL_TIME = "dwell_time";
 	private static final String KEY_ADC_TIME = "adc_time";
+	private static final String KEY_STOP_WITHOUT_OPENING_DOORS = "stop_without_opening_doors";
 	private static final String KEY_STOP_INDEX = "stop_index";
 	private static final String KEY_STARTING_POS = "starting_pos";
 	private static final String KEY_ENDING_POS = "ending_pos";
 
 	public PathData(Rail rail, long savedRailBaseId, int dwellTime, int adcTime, BlockPos startingPos, BlockPos endingPos, int stopIndex) {
+		this(rail, savedRailBaseId, dwellTime, adcTime, false, startingPos, endingPos, stopIndex);
+	}
+
+	public PathData(Rail rail, long savedRailBaseId, int dwellTime, int adcTime, boolean stopWithoutOpeningDoors, BlockPos startingPos, BlockPos endingPos, int stopIndex) {
 		this.rail = rail;
 		this.savedRailBaseId = savedRailBaseId;
 		this.dwellTime = dwellTime;
 		this.adcTime = adcTime;
+		this.stopWithoutOpeningDoors = stopWithoutOpeningDoors;
 		this.startingPos = startingPos;
 		this.endingPos = endingPos;
 		this.stopIndex = stopIndex;
 	}
 
 	public PathData(Rail rail, long savedRailBaseId, int dwellTime, BlockPos startingPos, BlockPos endingPos, int stopIndex) {
-		this(rail, savedRailBaseId, dwellTime, 0, startingPos, endingPos, stopIndex);
+		this(rail, savedRailBaseId, dwellTime, 0, false, startingPos, endingPos, stopIndex);
 	}
 
 	public PathData(Map<String, Value> map) {
@@ -53,6 +60,7 @@ public class PathData extends SerializedDataBase {
 		savedRailBaseId = messagePackHelper.getLong(KEY_SAVED_RAIL_BASE_ID);
 		dwellTime = messagePackHelper.getInt(KEY_DWELL_TIME);
 		adcTime = messagePackHelper.getInt(KEY_ADC_TIME);
+		stopWithoutOpeningDoors = map.containsKey(KEY_STOP_WITHOUT_OPENING_DOORS) && messagePackHelper.getBoolean(KEY_STOP_WITHOUT_OPENING_DOORS);
 		stopIndex = messagePackHelper.getInt(KEY_STOP_INDEX);
 		startingPos = BlockPos.of(messagePackHelper.getLong(KEY_STARTING_POS));
 		endingPos = BlockPos.of(messagePackHelper.getLong(KEY_ENDING_POS));
@@ -64,6 +72,7 @@ public class PathData extends SerializedDataBase {
 		savedRailBaseId = compoundTag.getLong(KEY_SAVED_RAIL_BASE_ID);
 		dwellTime = compoundTag.getInt(KEY_DWELL_TIME);
 		adcTime = compoundTag.getInt(KEY_ADC_TIME);
+		stopWithoutOpeningDoors = compoundTag.getBoolean(KEY_STOP_WITHOUT_OPENING_DOORS);
 		stopIndex = compoundTag.getInt(KEY_STOP_INDEX);
 		startingPos = BlockPos.of(compoundTag.getLong(KEY_STARTING_POS));
 		endingPos = BlockPos.of(compoundTag.getLong(KEY_ENDING_POS));
@@ -74,6 +83,7 @@ public class PathData extends SerializedDataBase {
 		savedRailBaseId = packet.readLong();
 		dwellTime = packet.readInt();
 		adcTime = packet.readInt();
+		stopWithoutOpeningDoors = packet.readBoolean();
 		stopIndex = packet.readInt();
 		startingPos = BlockPos.of(packet.readLong());
 		endingPos = BlockPos.of(packet.readLong());
@@ -88,6 +98,7 @@ public class PathData extends SerializedDataBase {
 		messagePacker.packString(KEY_SAVED_RAIL_BASE_ID).packLong(savedRailBaseId);
 		messagePacker.packString(KEY_DWELL_TIME).packInt(dwellTime);
 		messagePacker.packString(KEY_ADC_TIME).packInt(adcTime);
+		messagePacker.packString(KEY_STOP_WITHOUT_OPENING_DOORS).packBoolean(stopWithoutOpeningDoors);
 		messagePacker.packString(KEY_STOP_INDEX).packInt(stopIndex);
 		messagePacker.packString(KEY_STARTING_POS).packLong(startingPos.asLong());
 		messagePacker.packString(KEY_ENDING_POS).packLong(endingPos.asLong());
@@ -95,7 +106,7 @@ public class PathData extends SerializedDataBase {
 
 	@Override
 	public int messagePackLength() {
-		return 7;
+		return 8;
 	}
 
 	@Override
@@ -104,6 +115,7 @@ public class PathData extends SerializedDataBase {
 		packet.writeLong(savedRailBaseId);
 		packet.writeInt(dwellTime);
 		packet.writeInt(adcTime);
+		packet.writeBoolean(stopWithoutOpeningDoors);
 		packet.writeInt(stopIndex);
 		packet.writeLong(startingPos.asLong());
 		packet.writeLong(endingPos.asLong());

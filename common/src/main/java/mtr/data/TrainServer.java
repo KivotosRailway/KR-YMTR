@@ -80,6 +80,9 @@ public class TrainServer extends Train {
 
 	@Override
 	protected boolean openDoors() {
+		if (nextStoppingIndex < path.size() && path.get(nextStoppingIndex).stopWithoutOpeningDoors) {
+			return false;
+		}
 		if (isCurrentlyManual) {
 			return doorTarget;
 		} else {

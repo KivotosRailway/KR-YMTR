@@ -202,6 +202,7 @@
 	"gui.mtr.drag_file_to_upload": "拖动文件以上传",
 	"gui.mtr.dwell_time": "停留时间",
 	"gui.mtr.adc_time": "关门后等候时间",
+	"gui.mtr.stop_without_opening_doors": "停站不开门",
 	"gui.mtr.edit_area": "点击并拖动以绘制区域。",
 	"gui.mtr.edit_instructions": "编辑指令",
 	"gui.mtr.edit_route": "点击站台以将其添加到路线。",

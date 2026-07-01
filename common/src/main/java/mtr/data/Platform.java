@@ -45,6 +45,8 @@ public final class Platform extends SavedRailBase {
 		} else if (KEY_ADC_TIME.equals(key)) {
 			adcTime = packet.readInt();
 			adcTime = transportMode.continuousMovement ? 0 : adcTime;
+		} else if (KEY_STOP_WITHOUT_OPENING_DOORS.equals(key)) {
+			stopWithoutOpeningDoors = packet.readBoolean();
 		} else {
 			super.update(key, packet);
 		}
@@ -74,6 +76,16 @@ public final class Platform extends SavedRailBase {
 		packet.writeUtf(transportMode.toString());
 		packet.writeUtf(KEY_ADC_TIME);
 		packet.writeInt(adcTime);
+		sendPacket.accept(packet);
+	}
+
+	public void setStopWithoutOpeningDoors(boolean stopWithoutOpeningDoors, Consumer<FriendlyByteBuf> sendPacket) {
+		this.stopWithoutOpeningDoors = stopWithoutOpeningDoors;
+		final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+		packet.writeLong(id);
+		packet.writeUtf(transportMode.toString());
+		packet.writeUtf(KEY_STOP_WITHOUT_OPENING_DOORS);
+		packet.writeBoolean(stopWithoutOpeningDoors);
 		sendPacket.accept(packet);
 	}
 }
