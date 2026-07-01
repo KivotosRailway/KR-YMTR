@@ -64,10 +64,34 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	public static final float ACCELERATION_DEFAULT = 0.01F; // m/tick^2
 	public static final float MAX_ACCELERATION = 0.05F; // m/tick^2
 	public static final float MIN_ACCELERATION = 0.0001F; // m/tick^2
-	public static final int ACCELERATION_DECIMAL_PLACES = 5; // 对应 0.00001 m/tick^2 精度
+	public static final int ACCELERATION_DECIMAL_PLACES = 5;
 	public static final int DOOR_MOVE_TIME = 64;
 	protected static final int MAX_CHECK_DISTANCE = 32;
 	protected static final int DOOR_DELAY = 20;
+
+	public static final int P5 = 5;
+	public static final int P4 = 4;
+	public static final int P3 = 3;
+	public static final int P2 = 2;
+	public static final int P1 = 1;
+	public static final int N = 0;
+	public static final int B1 = -1;
+	public static final int B2 = -2;
+	public static final int B3 = -3;
+	public static final int B4 = -4;
+	public static final int B5 = -5;
+	public static final int B6 = -6;
+	public static final int B7 = -7;
+	public static final int EB = -8;
+	public static final int MAX_POWER_NOTCH = P5;
+	public static final int MAX_BRAKE_NOTCH = B7;
+
+	@Deprecated
+	public static final int OLD_MAX_POWER = 2;
+	@Deprecated
+	public static final int OLD_MAX_BRAKE = -2;
+	@Deprecated
+	public static final int OLD_EMERGENCY_BRAKE = -3;
 
 	private static final String KEY_SPEED = "speed";
 	private static final String KEY_RAIL_PROGRESS = "rail_progress";
@@ -364,15 +388,36 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	}
 
 	public boolean changeManualSpeed(boolean isAccelerate) {
-		if (doorValue == 0 && isAccelerate && manualNotch >= -2 && manualNotch < 2) {
+		if (manualNotch <= EB) {
+			return false;
+		}
+		if (doorValue == 0 && isAccelerate && manualNotch >= B7 && manualNotch < P5) {
 			manualNotch++;
 			return true;
-		} else if (!isAccelerate && manualNotch > -2) {
+		} else if (!isAccelerate && manualNotch > B7) {
 			manualNotch--;
+			return true;
+		} else if (!isAccelerate && manualNotch == B7) {
+			// 在B7(最大常用制动)时再按制动键，触发紧急制动EB
+			manualNotch = EB;
 			return true;
 		} else {
 			return false;
 		}
+	}
+
+	public boolean isInEmergencyBrake() {
+		return manualNotch <= EB;
+	}
+
+	@Deprecated
+	public static boolean isEmergencyBrakeLegacy(int manualNotch) {
+		return manualNotch <= OLD_EMERGENCY_BRAKE;
+	}
+
+	@Deprecated
+	public static boolean isManualNotchInLegacyRange(int manualNotch) {
+		return manualNotch >= OLD_MAX_BRAKE && manualNotch <= OLD_MAX_POWER;
 	}
 
 	public boolean toggleDoors() {
@@ -532,16 +577,16 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						if (!transportMode.continuousMovement && stoppingDistance < 0.5 * speed * speed / accelerationConstant) {
 							if (!isCurrentlyManual || isReversalPoint) {
 								speed = stoppingDistance <= 0 ? Train.ACCELERATION_DEFAULT : (float) Math.max(speed - (0.5 * speed * speed / stoppingDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
-								manualNotch = -3;
+								manualNotch = EB;
 							} else {
-								if (manualNotch >= -2) {
+								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
 									speed = Mth.clamp(speed + manualNotch * newAcceleration / 2, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							}
 						} else {
 							if (isCurrentlyManual) {
-								if (manualNotch >= -2) {
+								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
 									speed = Mth.clamp(speed + manualNotch * newAcceleration / 2, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
@@ -554,12 +599,12 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 								}
 								if (speed < railSpeed) {
 									speed = Math.min(speed + newAcceleration, railSpeed);
-									manualNotch = 2;
+									manualNotch = P5;
 								} else if (speed > railSpeed) {
 									speed = Math.max(speed - newAcceleration, railSpeed);
-									manualNotch = -2;
+									manualNotch = B7;
 								} else {
-									manualNotch = 0;
+									manualNotch = N;
 								}
 							}
 						}

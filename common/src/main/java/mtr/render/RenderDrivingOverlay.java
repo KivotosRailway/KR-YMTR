@@ -157,7 +157,7 @@ public class RenderDrivingOverlay implements IGui {
 		matrixStack.translate(-RADIUS * 0.3, -TOOL_SIZE * 0.1, 0);
 		String notchText;
 		int notchColor;
-		if (manualNotch < -2) {
+		if (manualNotch <= Train.EB) {
 			notchText = "EB";
 			notchColor = RED_COLOR;
 		} else if (manualNotch < 0) {
@@ -171,10 +171,15 @@ public class RenderDrivingOverlay implements IGui {
 			notchColor = ARGB_WHITE;
 		}
 		drawCenteredText(guiGraphics, client, notchText, notchColor);
-		if (manualNotch != 0 && manualNotch >= -2) {
+		if (manualNotch != 0 && manualNotch > Train.EB) {
 			matrixStack.translate(0, 8, 0);
 			matrixStack.scale(0.5F, 0.5F, 1);
-			final int powerPercent = Math.abs(manualNotch) * 100 / 2;
+			final int powerPercent;
+			if (manualNotch > 0) {
+				powerPercent = manualNotch * 100 / Train.MAX_POWER_NOTCH;
+			} else {
+				powerPercent = (-manualNotch) * 100 / (-Train.MAX_BRAKE_NOTCH);
+			}
 			drawCenteredText(guiGraphics, client, "(" + powerPercent + "%)", notchColor);
 		}
 		matrixStack.popPose();
