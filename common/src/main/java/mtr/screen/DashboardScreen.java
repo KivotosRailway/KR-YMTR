@@ -116,8 +116,8 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 		IDrawing.setPositionAndWidth(buttonOptions, width - SQUARE_SIZE * 5, bottomRowY, SQUARE_SIZE * 3);
 
 		IDrawing.setPositionAndWidth(textFieldName, TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH - COLOR_WIDTH - TEXT_FIELD_PADDING);
-		IDrawing.setPositionAndWidth(textFieldCustomDestination, TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH / 2 - TEXT_FIELD_PADDING);
-		IDrawing.setPositionAndWidth(buttonStopWithoutOpeningDoors, PANEL_WIDTH / 2 + TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH / 2 - TEXT_FIELD_PADDING);
+		IDrawing.setPositionAndWidth(textFieldCustomDestination, TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, PANEL_WIDTH - TEXT_FIELD_PADDING);
+		IDrawing.setPositionAndWidth(buttonStopWithoutOpeningDoors, SQUARE_SIZE, bottomRowY - SQUARE_SIZE * 2 - TEXT_FIELD_PADDING / 2, PANEL_WIDTH - TEXT_FIELD_PADDING);
 		IDrawing.setPositionAndWidth(colorSelector, PANEL_WIDTH - COLOR_WIDTH + TEXT_FIELD_PADDING / 2, bottomRowY - SQUARE_SIZE - TEXT_FIELD_PADDING / 2, COLOR_WIDTH - TEXT_FIELD_PADDING);
 
 		dashboardList.x = 0;
@@ -485,7 +485,7 @@ public class DashboardScreen extends ScreenMapper implements IGui, IPacket {
 		textFieldCustomDestination.visible = showRouteDestinationFields;
 		buttonStopWithoutOpeningDoors.visible = showRouteDestinationFields;
 		colorSelector.visible = showTextFields;
-		dashboardList.height = height - SQUARE_SIZE * 2 - (showTextFields || showRouteDestinationFields ? SQUARE_SIZE + TEXT_FIELD_PADDING : 0);
+		dashboardList.height = height - SQUARE_SIZE * 2 - (showTextFields ? SQUARE_SIZE + TEXT_FIELD_PADDING : 0) - (showRouteDestinationFields ? SQUARE_SIZE * 2 + TEXT_FIELD_PADDING : 0);
 	}
 
 	private enum SelectedTab {STATIONS, ROUTES, DEPOTS}
