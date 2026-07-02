@@ -8,17 +8,21 @@ import mtr.packet.IPacket;
 import mtr.path.PathData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.msgpack.core.MessagePacker;
 import org.msgpack.value.Value;
 
@@ -398,7 +402,6 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 			manualNotch--;
 			return true;
 		} else if (!isAccelerate && manualNotch == B7) {
-			// 在B7(最大常用制动)时再按制动键，触发紧急制动EB
 			manualNotch = EB;
 			return true;
 		} else {
@@ -840,6 +843,21 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 
 	public static boolean isHoldingKey(Player player) {
 		return player != null && !Keys.LIFTS_ONLY && player.isHolding(Items.DRIVER_KEY.get());
+	}
+
+	@Nullable
+	private static Item onboardToolItem;
+	private static boolean onboardToolChecked;
+
+	public static boolean isHoldingOnboardTool(Player player) {
+		if (player == null) {
+			return false;
+		}
+		if (onboardToolItem == null && !onboardToolChecked) {
+			onboardToolChecked = true;
+			onboardToolItem = BuiltInRegistries.ITEM.get(new ResourceLocation("mtryum", "onboard_tool"));
+		}
+		return onboardToolItem != null && player.isHolding(onboardToolItem);
 	}
 
 	public static double getAverage(double a, double b) {
