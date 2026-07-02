@@ -367,6 +367,30 @@ public class Depot extends AreaBase implements IReducedSaveData {
 
 	public int getMillisUntilDeploy(int offset, int currentTimeOffset) {
 		final long millis = (System.currentTimeMillis() + currentTimeOffset) % MILLISECONDS_PER_DAY;
+
+		// 单班次特殊处理：原逻辑的"发车窗口"覆盖整24小时，首次发车后lastDeployedMillis
+		// 始终落在窗口内，导致后续检查全部拒绝。改为按日历日判断是否当天已发车。
+		if (tempDepartures.size() == 1) {
+			final long thisDeparture = tempDepartures.get(0);
+			final long now = System.currentTimeMillis() + currentTimeOffset;
+			final long tod = now % MILLISECONDS_PER_DAY;
+
+			if (offset > 1) {
+				final int daysAfter = offset - 1;
+				return (int) (wrapTime(thisDeparture + (long) daysAfter * MILLISECONDS_PER_DAY, millis) - millis);
+			}
+
+			if (tod < thisDeparture) {
+				return (int) (thisDeparture - tod);
+			}
+			final long todayDay = now / MILLISECONDS_PER_DAY;
+			final long lastDeployedDay = (lastDeployedMillis + currentTimeOffset) / MILLISECONDS_PER_DAY;
+			if (lastDeployedDay >= todayDay) {
+				return (int) (thisDeparture + MILLISECONDS_PER_DAY - tod);
+			}
+			return 0;
+		}
+
 		for (int i = 0; i < tempDepartures.size(); i++) {
 			final long thisDeparture = tempDepartures.get(i);
 			final long nextDeparture = wrapTime(tempDepartures.get((i + 1) % tempDepartures.size()), thisDeparture);
