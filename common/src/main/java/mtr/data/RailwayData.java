@@ -284,52 +284,19 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 					}
 				}));
 
-				if (!railsToAdd.isEmpty()) {
-					final long packetId = new Random().nextLong();
-					final FriendlyByteBuf fullPacket = new FriendlyByteBuf(Unpooled.buffer());
-					writeRailsPacket(fullPacket, railsToAdd);
+				final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+				packet.writeInt(railsToAdd.size());
+				railsToAdd.forEach((posStart, railMap) -> {
+					packet.writeBlockPos(posStart);
+					packet.writeInt(railMap.size());
+					railMap.forEach((posEnd, rail) -> {
+						packet.writeBlockPos(posEnd);
+						rail.writePacket(packet);
+					});
+				});
 
-					if (fullPacket.readableBytes() <= MAX_PACKET_BYTES) {
-						final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
-						packet.writeLong(packetId);
-						packet.writeInt(1);
-						packet.writeInt(0);
-						packet.writeBytes(fullPacket);
-						fullPacket.release();
-						Registry.sendToPlayer((ServerPlayer) player, PACKET_WRITE_RAILS, packet);
-					} else {
-						fullPacket.release();
-						final List<Map<BlockPos, Map<BlockPos, Rail>>> chunks = new ArrayList<>();
-						Map<BlockPos, Map<BlockPos, Rail>> currentChunk = new HashMap<>();
-						int currentSize = 0;
-						for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsToAdd.entrySet()) {
-							final Map<BlockPos, Map<BlockPos, Rail>> singleEntry = new HashMap<>();
-							singleEntry.put(entry.getKey(), entry.getValue());
-							final FriendlyByteBuf testPacket = new FriendlyByteBuf(Unpooled.buffer());
-							writeRailsPacket(testPacket, singleEntry);
-							final int entrySize = testPacket.readableBytes();
-							testPacket.release();
-							if (!currentChunk.isEmpty() && currentSize + entrySize > MAX_PACKET_BYTES) {
-								chunks.add(currentChunk);
-								currentChunk = new HashMap<>();
-								currentSize = 0;
-							}
-							currentChunk.put(entry.getKey(), entry.getValue());
-							currentSize += entrySize;
-						}
-						if (!currentChunk.isEmpty()) {
-							chunks.add(currentChunk);
-						}
-
-						for (int i = 0; i < chunks.size(); i++) {
-							final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
-							packet.writeLong(packetId);
-							packet.writeInt(chunks.size());
-							packet.writeInt(i);
-							writeRailsPacket(packet, chunks.get(i));
-							Registry.sendToPlayer((ServerPlayer) player, PACKET_WRITE_RAILS, packet);
-						}
-					}
+				if (packet.readableBytes() <= MAX_PACKET_BYTES) {
+					Registry.sendToPlayer((ServerPlayer) player, PACKET_WRITE_RAILS, packet);
 				}
 				playerLastUpdatedPositions.put(player, playerBlockPos);
 			}
@@ -828,18 +795,6 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 				world.players().forEach(player -> Registry.sendToPlayer((ServerPlayer) player, packetId, packet));
 			}
 			return delete;
-		});
-	}
-
-	private static void writeRailsPacket(FriendlyByteBuf packet, Map<BlockPos, Map<BlockPos, Rail>> railsData) {
-		packet.writeInt(railsData.size());
-		railsData.forEach((posStart, railMap) -> {
-			packet.writeBlockPos(posStart);
-			packet.writeInt(railMap.size());
-			railMap.forEach((posEnd, rail) -> {
-				packet.writeBlockPos(posEnd);
-				rail.writePacket(packet);
-			});
 		});
 	}
 

@@ -46,9 +46,6 @@ public final class ClientData {
 	public static final ClientCache DATA_CACHE = new ClientCache(STATIONS, PLATFORMS, SIDINGS, ROUTES, DEPOTS, LIFTS);
 
 	private static final Map<UUID, Integer> PLAYER_RIDING_COOL_DOWN = new HashMap<>();
-	private static long pendingRailsPacketId = -1;
-	private static int pendingRailsTotalChunks;
-	private static final List<Map<BlockPos, Map<BlockPos, Rail>>> pendingRailsChunks = new ArrayList<>();
 
 	public static void tick() {
 		final Set<UUID> playersToRemove = new HashSet<>();
@@ -85,11 +82,8 @@ public final class ClientData {
 	}
 
 	public static void writeRails(Minecraft client, FriendlyByteBuf packet) {
-		final long packetId = packet.readLong();
-		final int totalChunks = packet.readInt();
-		final int chunkIndex = packet.readInt();
-
 		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = new HashMap<>();
+
 		final int railsCount = packet.readInt();
 		for (int i = 0; i < railsCount; i++) {
 			final BlockPos startPos = packet.readBlockPos();
@@ -101,37 +95,7 @@ public final class ClientData {
 			railsTemp.put(startPos, railMap);
 		}
 
-		if (totalChunks <= 1) {
-			client.execute(() -> clearAndAddAll(RAILS, railsTemp));
-			pendingRailsChunks.clear();
-			pendingRailsPacketId = -1;
-			return;
-		}
-
-		if (packetId != pendingRailsPacketId) {
-			pendingRailsPacketId = packetId;
-			pendingRailsTotalChunks = totalChunks;
-			pendingRailsChunks.clear();
-		}
-
-		pendingRailsChunks.add(railsTemp);
-
-		if (chunkIndex >= totalChunks - 1) {
-			final List<Map<BlockPos, Map<BlockPos, Rail>>> chunksCopy = new ArrayList<>(pendingRailsChunks);
-			pendingRailsChunks.clear();
-			pendingRailsPacketId = -1;
-			client.execute(() -> {
-				RAILS.clear();
-				for (final Map<BlockPos, Map<BlockPos, Rail>> chunk : chunksCopy) {
-					chunk.forEach((startPos, railMap) -> {
-						if (!RAILS.containsKey(startPos)) {
-							RAILS.put(startPos, new HashMap<>());
-						}
-						RAILS.get(startPos).putAll(railMap);
-					});
-				}
-			});
-		}
+		client.execute(() -> clearAndAddAll(RAILS, railsTemp));
 	}
 
 	public static void updateTrains(Minecraft client, FriendlyByteBuf packet) {
