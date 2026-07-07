@@ -42,6 +42,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	protected boolean isOnRoute = false;
 	protected boolean isCurrentlyManual;
 	protected int manualNotch;
+	protected boolean useLegacyManualNotch = true;
 
 	public final long sidingId;
 	public final String trainId;
@@ -89,6 +90,26 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	public static final int EB = -8;
 	public static final int MAX_POWER_NOTCH = P5;
 	public static final int MAX_BRAKE_NOTCH = B7;
+
+	public static float getManualNotchAccelerationMultiplier(int notch) {
+		switch (notch) {
+			case EB: return -5.0f;
+			case B7: return -1.5f;
+			case B6: return -1.25f;
+			case B5: return -1.0f;
+			case B4: return -0.7f;
+			case B3: return -0.5f;
+			case B2: return -0.2f;
+			case B1: return -0.1f;
+			case N:  return 0.0f;
+			case P1: return 0.2f;
+			case P2: return 0.4f;
+			case P3: return 0.6f;
+			case P4: return 0.8f;
+			case P5: return 1.0f;
+			default: return notch / 2.0f;
+		}
+	}
 
 	@Deprecated
 	public static final int OLD_MAX_POWER = 2;
@@ -277,6 +298,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		manualToAutomaticTime = packet.readInt();
 		isOnRoute = packet.readBoolean();
 		manualNotch = packet.readInt();
+		useLegacyManualNotch = packet.readBoolean();
 		doorTarget = packet.readBoolean();
 
 		final int ridingEntitiesCount = packet.readInt();
@@ -365,6 +387,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		packet.writeInt(manualToAutomaticTime);
 		packet.writeBoolean(isOnRoute);
 		packet.writeInt(manualNotch);
+		packet.writeBoolean(useLegacyManualNotch);
 		packet.writeBoolean(doorTarget);
 		packet.writeInt(ridingEntities.size());
 		ridingEntities.forEach(packet::writeUUID);
@@ -392,6 +415,20 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	}
 
 	public boolean changeManualSpeed(boolean isAccelerate) {
+		useLegacyManualNotch = true;
+		if (doorValue == 0 && isAccelerate && manualNotch >= -2 && manualNotch < 2) {
+			manualNotch++;
+			return true;
+		} else if (!isAccelerate && manualNotch > -2) {
+			manualNotch--;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public boolean changeManualSpeedNew(boolean isAccelerate) {
+		useLegacyManualNotch = false;
 		if (manualNotch <= EB) {
 			return false;
 		}
@@ -407,6 +444,10 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		} else {
 			return false;
 		}
+	}
+
+	public int getManualNotchPercentageForDisplay() {
+		return Math.round(Math.abs(getManualNotchAccelerationMultiplier(manualNotch)) * 100);
 	}
 
 	public boolean isInEmergencyBrake() {
@@ -581,20 +622,20 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						final double stoppingDistance = distances.get(nextStoppingIndex) - railProgress;
 
 						if (!transportMode.continuousMovement && stoppingDistance < 0.5 * speed * speed / accelerationConstant) {
-							if (!isCurrentlyManual || isReversalPoint) {
+							if (!isCurrentlyManual || (isReversalPoint)) {
 								speed = stoppingDistance <= 0 ? Train.ACCELERATION_DEFAULT : (float) Math.max(speed - (0.5 * speed * speed / stoppingDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
 								manualNotch = EB;
 							} else {
 								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
-									speed = Mth.clamp(speed + manualNotch * newAcceleration / 2, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
+									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							}
 						} else {
 							if (isCurrentlyManual) {
 								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
-									speed = Mth.clamp(speed + manualNotch * newAcceleration / 2, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
+									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							} else {
 								final float railSpeed;
