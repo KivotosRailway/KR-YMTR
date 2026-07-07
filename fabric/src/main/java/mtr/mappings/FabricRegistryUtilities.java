@@ -119,7 +119,7 @@ public interface FabricRegistryUtilities {
 			};
 
 			addListenerMethod.invoke(eventBus, handler);
-		} catch (ClassNotFoundException e) {
+		} catch (ClassNotFoundException ignored) {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
