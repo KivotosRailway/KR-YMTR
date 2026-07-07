@@ -380,9 +380,7 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 					packet.writeBoolean(occupied);
 				});
 
-				if (packet.readableBytes() <= MAX_PACKET_BYTES) {
-					Registry.sendToPlayer((ServerPlayer) player, PACKET_UPDATE_SCHEDULE, packet);
-				}
+				Registry.sendToPlayer((ServerPlayer) player, PACKET_UPDATE_SCHEDULE, packet);
 			}
 		}
 
