@@ -3,7 +3,6 @@ package mtr;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.client.CustomResources;
 import mtr.client.ICustomResources;
-import mtr.mappings.FabricRegistryUtilities;
 import mtr.render.RenderDrivingOverlay;
 import mtr.render.RenderTrains;
 import net.fabricmc.api.ClientModInitializer;
@@ -33,7 +32,6 @@ public class MTRFabricClient implements ClientModInitializer, ICustomResources {
 		WorldRenderEvents.END.register(event -> MTRClient.incrementGameTick());
 		HudRenderCallback.EVENT.register((guiGraphics, tickDelta) -> RenderDrivingOverlay.render(guiGraphics));
 		ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new CustomResourcesWrapper());
-		FabricRegistryUtilities.registerConnectorCreativeTabsFallback();
 	}
 
 	private static class CustomResourcesWrapper implements SimpleSynchronousResourceReloadListener {
