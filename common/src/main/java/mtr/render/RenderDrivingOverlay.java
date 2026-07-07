@@ -174,12 +174,7 @@ public class RenderDrivingOverlay implements IGui {
 		if (manualNotch != 0 && manualNotch > Train.EB) {
 			matrixStack.translate(0, 8, 0);
 			matrixStack.scale(0.5F, 0.5F, 1);
-			final int powerPercent;
-			if (manualNotch > 0) {
-				powerPercent = manualNotch * 100 / Train.MAX_POWER_NOTCH;
-			} else {
-				powerPercent = (-manualNotch) * 100 / (-Train.MAX_BRAKE_NOTCH);
-			}
+			final int powerPercent = Math.round(Math.abs(Train.getManualNotchAccelerationMultiplier(manualNotch)) * 100);
 			drawCenteredText(guiGraphics, client, "(" + powerPercent + "%)", notchColor);
 		}
 		matrixStack.popPose();
