@@ -67,5 +67,5 @@ public interface IPacket {
 	ResourceLocation PACKET_UPDATE_TRAIN_SENSOR = new ResourceLocation(MTR.MOD_ID, "packet_update_train_announcer");
 	ResourceLocation PACKET_UPDATE_LIFT_TRACK_FLOOR = new ResourceLocation(MTR.MOD_ID, "packet_update_lift_track_floor");
 
-	int MAX_PACKET_BYTES = 4194304;
+	int MAX_PACKET_BYTES = 2097152;
 }
