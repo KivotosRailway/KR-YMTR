@@ -46,6 +46,7 @@ public class MTRForge {
 		MTR.init(MTRForge::registerItem, MTRForge::registerBlock, MTRForge::registerBlock, MTRForge::registerEnchantedBlock, MTRForge::registerBlockEntityType, MTRForge::registerEntityType, MTRForge::registerSoundEvent);
 	}
 
+	@SuppressWarnings("removal")
 	public MTRForge() {
 		final IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
 		ForgeUtilities.registerModEventBus(MTR.MOD_ID, eventBus);

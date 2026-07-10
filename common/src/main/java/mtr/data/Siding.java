@@ -169,7 +169,7 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 12;
+		return super.messagePackLength() + 13;
 	}
 
 	@Override

@@ -295,7 +295,9 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 					});
 				});
 
-				Registry.sendToPlayer((ServerPlayer) player, PACKET_WRITE_RAILS, packet);
+				if (packet.readableBytes() <= MAX_PACKET_BYTES) {
+					Registry.sendToPlayer((ServerPlayer) player, PACKET_WRITE_RAILS, packet);
+				}
 				playerLastUpdatedPositions.put(player, playerBlockPos);
 			}
 		});

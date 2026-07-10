@@ -376,7 +376,7 @@ public class TrainServer extends Train {
 	private int getNextStoppingIndex() {
 		final int headIndex = getIndex(0, 0, false);
 		for (int i = headIndex; i < path.size(); i++) {
-			if (path.get(i).dwellTime > 0 || (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1)))) {
+			if (path.get(i).dwellTime > 0) {
 				return i;
 			}
 		}
