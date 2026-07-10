@@ -9,6 +9,8 @@ import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.object.builder.v1.client.model.FabricModelPredicateProviderRegistry;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Registry;
@@ -33,7 +35,12 @@ public interface FabricRegistryUtilities {
 	}
 
 	static <T extends BlockEntityMapper> void registerTileEntityRenderer(BlockEntityType<T> type, Function<BlockEntityRenderDispatcher, BlockEntityRendererMapper<T>> factory) {
-		BlockEntityRendererRegistry.register(type, context -> factory.apply(null));
+		BlockEntityRendererRegistry.register(type, new BlockEntityRendererProvider<T>() {
+			@Override
+			public BlockEntityRenderer<T> create(BlockEntityRendererProvider.Context context) {
+				return factory.apply(null);
+			}
+		});
 	}
 
 	static <T extends Entity> void registerEntityRenderer(EntityType<T> type, Function<EntityRendererProvider.Context, EntityRendererMapper<T>> factory) {

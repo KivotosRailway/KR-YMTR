@@ -82,8 +82,21 @@ public final class ClientData {
 	}
 
 	public static void writeRails(Minecraft client, FriendlyByteBuf packet) {
-		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = new HashMap<>();
+		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = readRailsFromPacket(packet);
+		client.execute(() -> clearAndAddAll(RAILS, railsTemp));
+	}
 
+	public static void appendRails(Minecraft client, FriendlyByteBuf packet) {
+		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = readRailsFromPacket(packet);
+		client.execute(() -> {
+			for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
+				RAILS.put(entry.getKey(), entry.getValue());
+			}
+		});
+	}
+
+	private static Map<BlockPos, Map<BlockPos, Rail>> readRailsFromPacket(FriendlyByteBuf packet) {
+		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = new HashMap<>();
 		final int railsCount = packet.readInt();
 		for (int i = 0; i < railsCount; i++) {
 			final BlockPos startPos = packet.readBlockPos();
@@ -94,8 +107,7 @@ public final class ClientData {
 			}
 			railsTemp.put(startPos, railMap);
 		}
-
-		client.execute(() -> clearAndAddAll(RAILS, railsTemp));
+		return railsTemp;
 	}
 
 	public static void updateTrains(Minecraft client, FriendlyByteBuf packet) {

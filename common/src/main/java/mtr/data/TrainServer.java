@@ -1,5 +1,6 @@
 package mtr.data;
 
+import mtr.MtrDebug;
 import mtr.TrigCache;
 import mtr.block.*;
 import mtr.mappings.Utilities;
@@ -7,6 +8,8 @@ import mtr.path.PathData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
@@ -37,6 +40,8 @@ public class TrainServer extends Train {
 
 	private static final int TRAIN_UPDATE_DISTANCE = 512;
 	private static final int TICKS_TO_SEND_RAIL_PROGRESS = 40;
+	private static final int DEBUG_PERIODIC_TICKS = 200;
+	private int debugPeriodicCounter;
 
 	public TrainServer(long id, long sidingId, float railLength, String trainId, String baseTrainType, int trainCars, List<PathData> path, List<Double> distances, int repeatIndex1, int repeatIndex2, float accelerationConstant, List<Siding.TimeSegment> timeSegments, boolean isManual, int maxManualSpeed, int manualToAutomaticTime) {
 		super(id, sidingId, railLength, trainId, baseTrainType, trainCars, path, distances, repeatIndex1, repeatIndex2, accelerationConstant, isManual, maxManualSpeed, manualToAutomaticTime);
@@ -74,8 +79,16 @@ public class TrainServer extends Train {
 			railProgress += trainCars * trainSpacing;
 			reversed = !reversed;
 		}
+		final int oldStop = nextStoppingIndex;
 		nextStoppingIndex = getNextStoppingIndex();
 		super.startUp(world, trainCars, trainSpacing, isOppositeRail);
+		if (!world.isClientSide() && !isCurrentlyManual) {
+			MtrDebug.debugMessage(world, ridingEntities,
+					Component.translatable("gui.mtr.debug_departed").withStyle(ChatFormatting.GREEN)
+							.append(Component.literal(String.format(" §fdepartIdx=%d → targetIdx=%d §7(rp=%.1f)",
+									oldStop, nextStoppingIndex, railProgress)))
+			);
+		}
 	}
 
 	@Override
@@ -110,7 +123,7 @@ public class TrainServer extends Train {
 			double prevCarX, double prevCarY, double prevCarZ, float prevCarYaw, float prevCarPitch,
 			boolean doorLeftOpen, boolean doorRightOpen, double realSpacing
 	) {
-		VehicleRidingServer.mountRider(world, ridingEntities, id, routeId, carX, carY, carZ, realSpacing, width, carYaw, carPitch, doorLeftOpen || doorRightOpen, true, ridingCar, PACKET_UPDATE_TRAIN_PASSENGERS, player -> doorLeftOpen || doorRightOpen || (isManualAllowed && Train.isHoldingKey(player)) || Train.isHoldingOnboardTool(player), player -> {
+		VehicleRidingServer.mountRider(world, ridingEntities, id, routeId, carX, carY, carZ, realSpacing, width, carYaw, carPitch, doorLeftOpen || doorRightOpen, isManualAllowed || doorLeftOpen || doorRightOpen, ridingCar, PACKET_UPDATE_TRAIN_PASSENGERS, player -> !isManualAllowed || doorLeftOpen || doorRightOpen || Train.isHoldingKey(player) || Train.isHoldingOnboardTool(player), player -> {
 			if (isHoldingKey(player)) {
 				manualCoolDown = 0;
 			}
@@ -316,6 +329,23 @@ public class TrainServer extends Train {
 		updateRailProgressCounter++;
 		if (updateRailProgressCounter == TICKS_TO_SEND_RAIL_PROGRESS) {
 			updateRailProgressCounter = 0;
+		}
+
+		debugPeriodicCounter++;
+		if (debugPeriodicCounter >= DEBUG_PERIODIC_TICKS) {
+			debugPeriodicCounter = 0;
+			if (!isCurrentlyManual && !world.isClientSide()) {
+				final int headIndex = getIndex(0, spacing, false);
+				final int tailIndex = getIndex(trainCars, spacing, true);
+				final float railSpeed = getRailSpeed(headIndex);
+				MtrDebug.debugMessage(world, ridingEntities,
+						Component.translatable("gui.mtr.debug_periodic").withStyle(ChatFormatting.AQUA)
+								.append(Component.literal(String.format(
+										" §f%s §7cars=%d headIdx=%d tailIdx=%d speed=%.3f railSpeed=%.3f progress=%.1f nextStop=%d nextPlat=%d routeId=%d",
+										baseTrainType, trainCars, headIndex, tailIndex, speed, railSpeed, railProgress, nextStoppingIndex, nextPlatformIndex, routeId
+								)))
+				);
+			}
 		}
 
 		if (isManualAllowed) {

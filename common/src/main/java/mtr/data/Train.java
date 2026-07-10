@@ -4,6 +4,7 @@ import mtr.Items;
 import mtr.Keys;
 import mtr.block.BlockPSDAPGBase;
 import mtr.block.BlockPlatform;
+import mtr.MtrDebug;
 import mtr.packet.IPacket;
 import mtr.path.PathData;
 import net.minecraft.core.BlockPos;
@@ -12,6 +13,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
@@ -567,6 +570,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 
 				if (railProgress >= distances.get(distances.size() - 1) - (railLength - trainCars * spacing) / 2) {
 					isOnRoute = false;
+					debugStopReport(world, "gui.mtr.debug_end_of_route", "");
 					manualNotch = -2;
 					ridingEntities.clear();
 					tempDoorOpen = false;
@@ -609,6 +613,15 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							final int checkIndex = getIndex(0, spacing, true) + 1;
 							if (isRailBlocked(checkIndex)) {
 								nextStoppingIndex = checkIndex - 1;
+								debugStopReport(world, "gui.mtr.debug_rail_blocked", "checkIdx=" + checkIndex);
+							} else if (nextPlatformIndex > 0 && nextPlatformIndex < path.size()) {
+								if (nextStoppingIndex != nextPlatformIndex) {
+									final int oldStop = nextStoppingIndex;
+									nextStoppingIndex = nextPlatformIndex;
+									debugStopReport(world, "gui.mtr.debug_recovered", "oldStop=" + oldStop);
+								} else {
+									nextStoppingIndex = nextPlatformIndex;
+								}
 							}
 						}
 
@@ -623,6 +636,10 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 
 						if (!transportMode.continuousMovement && stoppingDistance < 0.5 * speed * speed / accelerationConstant) {
 							if (!isCurrentlyManual || (isReversalPoint)) {
+								if (!wasDecelerating) {
+									wasDecelerating = true;
+									debugStopReport(world, "gui.mtr.debug_decel_start", "dist=" + String.format("%.1f", stoppingDistance));
+								}
 								speed = stoppingDistance <= 0 ? Train.ACCELERATION_DEFAULT : (float) Math.max(speed - (0.5 * speed * speed / stoppingDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
 								manualNotch = EB;
 							} else {
@@ -632,6 +649,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 								}
 							}
 						} else {
+							wasDecelerating = false;
 							if (isCurrentlyManual) {
 								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
@@ -673,6 +691,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							railProgress = distances.get(nextStoppingIndex);
 							speed = 0;
 							manualNotch = -2;
+							debugStopReport(world, "gui.mtr.debug_reached_stop", "dwell=" + (totalDwellTicks / 10) + "s");
 						} else {
 							int newIndex = -1;
 							for (int i = nextStoppingIndex + 1; i < path.size(); i++) {
@@ -745,6 +764,28 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	private int lastReportedStopIndex = -1;
+	private String lastReportedStopReason = "";
+	private boolean wasDecelerating;
+
+	private void debugStopReport(Level world, String reasonKey, String details) {
+		final String dedupKey = reasonKey + "@" + nextStoppingIndex;
+		if (!dedupKey.equals(lastReportedStopReason)) {
+			lastReportedStopReason = dedupKey;
+			final int headIndex = getIndex(0, spacing, false);
+			final float brakingDist = 0.5F * speed * speed / accelerationConstant;
+			final String body = String.format(" §fstopIdx=%d §7(head=%d rp=%.1f spd=%.3f brkDist=%.1f platIdx=%d man=%b)",
+					nextStoppingIndex, headIndex, railProgress, speed, brakingDist, nextPlatformIndex, isCurrentlyManual);
+			final String railInfo = nextStoppingIndex < path.size() && nextStoppingIndex >= 0 ? " §7rail=" + path.get(nextStoppingIndex).rail.railType : "";
+			MtrDebug.debugMessage(world, ridingEntities,
+					Component.literal("§e[")
+							.append(Component.translatable(reasonKey).withStyle(ChatFormatting.YELLOW))
+							.append(Component.literal("]"))
+							.append(Component.literal(body + railInfo + " §7" + details))
+			);
 		}
 	}
 
@@ -896,7 +937,10 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		}
 		if (onboardToolItem == null && !onboardToolChecked) {
 			onboardToolChecked = true;
-			onboardToolItem = BuiltInRegistries.ITEM.get(new ResourceLocation("mtryum", "onboard_tool"));
+			final ResourceLocation id = new ResourceLocation("mtryum", "onboard_tool");
+			if (BuiltInRegistries.ITEM.containsKey(id)) {
+				onboardToolItem = BuiltInRegistries.ITEM.get(id);
+			}
 		}
 		return onboardToolItem != null && player.isHolding(onboardToolItem);
 	}

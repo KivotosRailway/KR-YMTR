@@ -284,20 +284,7 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 					}
 				}));
 
-				final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
-				packet.writeInt(railsToAdd.size());
-				railsToAdd.forEach((posStart, railMap) -> {
-					packet.writeBlockPos(posStart);
-					packet.writeInt(railMap.size());
-					railMap.forEach((posEnd, rail) -> {
-						packet.writeBlockPos(posEnd);
-						rail.writePacket(packet);
-					});
-				});
-
-				if (packet.readableBytes() <= MAX_PACKET_BYTES) {
-					Registry.sendToPlayer((ServerPlayer) player, PACKET_WRITE_RAILS, packet);
-				}
+				sendRailsInChunks((ServerPlayer) player, railsToAdd);
 				playerLastUpdatedPositions.put(player, playerBlockPos);
 			}
 		});
@@ -504,6 +491,55 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 	public void setUseTimeAndWindSync(boolean useTimeAndWindSync) {
 		this.useTimeAndWindSync = useTimeAndWindSync;
 		runRealTimeSync();
+	}
+
+	private void sendRailsInChunks(ServerPlayer player, Map<BlockPos, Map<BlockPos, Rail>> railsToAdd) {
+		if (railsToAdd.isEmpty()) {
+			return;
+		}
+
+		final int MAX_SAFE = MAX_PACKET_BYTES - 4096;
+		final List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> entries = new ArrayList<>(railsToAdd.entrySet());
+		final List<List<Map.Entry<BlockPos, Map<BlockPos, Rail>>>> chunks = new ArrayList<>();
+		List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> currentChunk = new ArrayList<>();
+		int currentSize = 0;
+
+		for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : entries) {
+			final FriendlyByteBuf tempBuf = new FriendlyByteBuf(Unpooled.buffer());
+			tempBuf.writeBlockPos(entry.getKey());
+			tempBuf.writeInt(entry.getValue().size());
+			for (final Map.Entry<BlockPos, Rail> railEntry : entry.getValue().entrySet()) {
+				tempBuf.writeBlockPos(railEntry.getKey());
+				railEntry.getValue().writePacket(tempBuf);
+			}
+			final int entrySize = tempBuf.readableBytes();
+
+			if (currentSize + entrySize > MAX_SAFE && !currentChunk.isEmpty()) {
+				chunks.add(currentChunk);
+				currentChunk = new ArrayList<>();
+				currentSize = 0;
+			}
+			currentChunk.add(entry);
+			currentSize += entrySize;
+		}
+		if (!currentChunk.isEmpty()) {
+			chunks.add(currentChunk);
+		}
+
+		for (int c = 0; c < chunks.size(); c++) {
+			final List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> chunk = chunks.get(c);
+			final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+			packet.writeInt(chunk.size());
+			for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : chunk) {
+				packet.writeBlockPos(entry.getKey());
+				packet.writeInt(entry.getValue().size());
+				for (final Map.Entry<BlockPos, Rail> railEntry : entry.getValue().entrySet()) {
+					packet.writeBlockPos(railEntry.getKey());
+					railEntry.getValue().writePacket(packet);
+				}
+			}
+			Registry.sendToPlayer(player, c == 0 ? PACKET_WRITE_RAILS : PACKET_APPEND_RAILS, packet);
+		}
 	}
 
 	private void validateData() {

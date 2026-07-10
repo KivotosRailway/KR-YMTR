@@ -787,5 +787,14 @@
 	"gui.mtr.lift_display_color": "显示颜色：%s",
 	"gui.mtr.lift_display_color_red": "红",
 	"gui.mtr.lift_display_color_orange": "橙",
-	"gui.mtr.lift_display_color_blue": "蓝"
+	"gui.mtr.lift_display_color_blue": "蓝",
+	"gui.mtr.debug_signal_on": "MTR 调试：信号调试已开启",
+	"gui.mtr.debug_signal_off": "MTR 调试：信号调试已关闭",
+	"gui.mtr.debug_departed": "列车发车",
+	"gui.mtr.debug_decel_start": "开始减速",
+	"gui.mtr.debug_recovered": "恢复目标",
+	"gui.mtr.debug_rail_blocked": "前方区段占用",
+	"gui.mtr.debug_reached_stop": "到达预定停车点",
+	"gui.mtr.debug_end_of_route": "到达线路终点",
+	"gui.mtr.debug_periodic": "定期状态"
 }

@@ -1,13 +1,20 @@
 package mtr;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import mtr.data.Depot;
 import mtr.data.RailwayData;
 import mtr.data.Route;
 import mtr.data.Station;
 import mtr.mappings.BlockEntityMapper;
+import mtr.mappings.RegistryUtilities;
 import mtr.packet.IPacket;
 import mtr.packet.PacketTrainDataGuiServer;
 import mtr.servlet.Webserver;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -20,6 +27,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.BiConsumer;
+
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
+import static com.mojang.brigadier.arguments.StringArgumentType.string;
+import static com.mojang.brigadier.arguments.StringArgumentType.word;
 
 public class MTR implements IPacket {
 
@@ -471,6 +483,8 @@ public class MTR implements IPacket {
 			}
 		});
 
+		RegistryUtilities.registerCommand(dispatcher -> registerDebugCommand(dispatcher));
+
 		if (!Keys.LIFTS_ONLY) {
 			Webserver.init();
 			Registry.registerServerStartingEvent(minecraftServer -> {
@@ -494,6 +508,29 @@ public class MTR implements IPacket {
 
 	public static boolean isGameTickInterval(int interval, int offset) {
 		return (gameTick + offset) % interval == 0;
+	}
+
+	private static void registerDebugCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
+		dispatcher.register(literal("mtr-debug")
+				.requires(source -> source.hasPermission(2))
+				.then(literal("signal")
+						.then(argument("state", word())
+								.suggests((context, builder) -> builder.suggest("on").suggest("off").buildFuture())
+								.executes(context -> {
+									final String state = StringArgumentType.getString(context, "state");
+									final ServerPlayer player = context.getSource().getPlayerOrException();
+									if ("on".equals(state)) {
+										MtrDebug.enableDebug(player.getUUID());
+										player.displayClientMessage(Component.translatable("gui.mtr.debug_signal_on"), false);
+									} else {
+										MtrDebug.disableDebug(player.getUUID());
+										player.displayClientMessage(Component.translatable("gui.mtr.debug_signal_off"), false);
+									}
+									return 1;
+								})
+						)
+				)
+		);
 	}
 
 	@FunctionalInterface

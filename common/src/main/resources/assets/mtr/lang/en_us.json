@@ -798,5 +798,14 @@
 	"gui.mtr.lift_display_color": "Color：%s",
 	"gui.mtr.lift_display_color_red": "Red",
 	"gui.mtr.lift_display_color_orange": "Orange",
-	"gui.mtr.lift_display_color_blue": "Blue"
+	"gui.mtr.lift_display_color_blue": "Blue",
+	"gui.mtr.debug_signal_on": "MTR Debug: Signal debug enabled",
+	"gui.mtr.debug_signal_off": "MTR Debug: Signal debug disabled",
+	"gui.mtr.debug_departed": "DEPARTED",
+	"gui.mtr.debug_decel_start": "DECEL_START",
+	"gui.mtr.debug_recovered": "RECOVERED",
+	"gui.mtr.debug_rail_blocked": "RAIL_BLOCKED",
+	"gui.mtr.debug_reached_stop": "REACHED_STOP",
+	"gui.mtr.debug_end_of_route": "END_OF_ROUTE",
+	"gui.mtr.debug_periodic": "PERIODIC"
 }
