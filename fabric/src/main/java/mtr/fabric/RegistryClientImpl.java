@@ -5,6 +5,7 @@ import mtr.mappings.BlockEntityMapper;
 import mtr.mappings.BlockEntityRendererMapper;
 import mtr.mappings.EntityRendererMapper;
 import mtr.mappings.FabricRegistryUtilities;
+import mtr.mappings.FabricRegistryUtilitiesClient;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -38,11 +39,11 @@ public class RegistryClientImpl {
 	}
 
 	public static <T extends BlockEntityMapper> void registerTileEntityRenderer(BlockEntityType<T> type, Function<BlockEntityRenderDispatcher, BlockEntityRendererMapper<T>> function) {
-		FabricRegistryUtilities.registerTileEntityRenderer(type, function);
+		FabricRegistryUtilitiesClient.registerTileEntityRenderer(type, function);
 	}
 
 	public static <T extends Entity> void registerEntityRenderer(EntityType<T> type, Function<Object, EntityRendererMapper<T>> function) {
-		FabricRegistryUtilities.registerEntityRenderer(type, function::apply);
+		FabricRegistryUtilitiesClient.registerEntityRenderer(type, function::apply);
 	}
 
 	public static void registerKeyBinding(KeyMapping keyMapping) {

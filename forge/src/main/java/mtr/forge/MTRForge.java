@@ -62,6 +62,9 @@ public class MTRForge {
 
 		eventBus.register(MTRModEventBus.class);
 		eventBus.register(ForgeUtilities.RegisterCreativeTabs.class);
+
+		RegistryUtilities.registerCommand(MTR::registerDebugCommand);
+
 		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
 			ForgeUtilities.renderTickAction(MTRClient::incrementGameTick);
 			ForgeUtilities.registerEntityRenderer(EntityTypes.SEAT::get, RenderTrains::new);

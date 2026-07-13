@@ -241,6 +241,8 @@
 	"gui.mtr.last_cable_car_station_cjk": "本缆车往%s",
 	"gui.mtr.last_train_station": "This train is going to %s",
 	"gui.mtr.last_train_station_cjk": "本列车往%s",
+	"gui.mtr.last_station_announcement": "The terminal station of this train is: %s.",
+	"gui.mtr.last_station_announcement_cjk": "本次列车终点站：%s。",
 	"gui.mtr.left": "左",
 	"gui.mtr.lift_acceleration": "加速度：%s",
 	"gui.mtr.lift_max_speed": "最高速度：%s",

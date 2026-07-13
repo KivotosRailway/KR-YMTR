@@ -195,6 +195,9 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 				final List<String> messages = new ArrayList<>();
 
 				final boolean isLightRailRoute = thisRoute.isLightRailRoute;
+				if (lastStation != null) {
+					messages.add(IGui.insertTranslation("gui.mtr.last_station_announcement_cjk", "gui.mtr.last_station_announcement", 1, lastStation.name));
+				}
 				messages.add(IGui.insertTranslation(isLightRailRoute ? "gui.mtr.next_station_light_rail_announcement_cjk" : "gui.mtr.next_station_announcement_cjk", isLightRailRoute ? "gui.mtr.next_station_light_rail_announcement" : "gui.mtr.next_station_announcement", 1, nextStation.name));
 
 				final String mergedInterchangeRoutes = getInterchangeRouteNames(nextStation, thisRoute, nextRoute);

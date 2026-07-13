@@ -615,13 +615,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 								nextStoppingIndex = checkIndex - 1;
 								debugStopReport(world, "gui.mtr.debug_rail_blocked", "checkIdx=" + checkIndex);
 							} else if (nextPlatformIndex > 0 && nextPlatformIndex < path.size()) {
-								if (nextStoppingIndex != nextPlatformIndex) {
-									final int oldStop = nextStoppingIndex;
-									nextStoppingIndex = nextPlatformIndex;
-									debugStopReport(world, "gui.mtr.debug_recovered", "oldStop=" + oldStop);
-								} else {
-									nextStoppingIndex = nextPlatformIndex;
-								}
+								nextStoppingIndex = nextPlatformIndex;
 							}
 						}
 

@@ -483,8 +483,6 @@ public class MTR implements IPacket {
 			}
 		});
 
-		RegistryUtilities.registerCommand(dispatcher -> registerDebugCommand(dispatcher));
-
 		if (!Keys.LIFTS_ONLY) {
 			Webserver.init();
 			Registry.registerServerStartingEvent(minecraftServer -> {
@@ -510,7 +508,7 @@ public class MTR implements IPacket {
 		return (gameTick + offset) % interval == 0;
 	}
 
-	private static void registerDebugCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
+	public static void registerDebugCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher.register(literal("mtr-debug")
 				.requires(source -> source.hasPermission(2))
 				.then(literal("signal")

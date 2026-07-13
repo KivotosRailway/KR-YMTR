@@ -6,6 +6,7 @@ import mtr.mappings.BlockEntityMapper;
 import mtr.mappings.FabricRegistryUtilities;
 import mtr.mappings.RegistryUtilities;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
@@ -21,6 +22,7 @@ public class MTRFabric implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		MTR.init(MTRFabric::registerItem, MTRFabric::registerBlock, MTRFabric::registerBlock, MTRFabric::registerEnchantedBlock, MTRFabric::registerBlockEntityType, MTRFabric::registerEntityType, MTRFabric::registerSoundEvent);
+		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, commandSelection) -> MTR.registerDebugCommand(dispatcher));
 	}
 
 	private static void registerItem(String path, RegistryObject<Item> item) {

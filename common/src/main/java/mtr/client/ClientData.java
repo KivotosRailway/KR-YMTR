@@ -39,6 +39,10 @@ public final class ClientData {
 	public static final SignalBlocks SIGNAL_BLOCKS = new SignalBlocks();
 	public static final Map<UUID, Boolean> OCCUPIED_RAILS = new HashMap<>();
 	public static final Map<BlockPos, Map<BlockPos, Rail>> RAILS = new HashMap<>();
+
+	private static final Map<BlockPos, Map<BlockPos, Rail>> pendingRailMerge = new HashMap<>();
+	private static long pendingRailTimestamp;
+	private static final long RAIL_MERGE_DELAY_MS = 50;
 	public static final Set<TrainClient> TRAINS = new HashSet<>();
 	public static final List<DataConverter> RAIL_ACTIONS = new ArrayList<>();
 	public static final Map<Long, Set<ScheduleEntry>> SCHEDULES_FOR_PLATFORM = new HashMap<>();
@@ -48,6 +52,15 @@ public final class ClientData {
 	private static final Map<UUID, Integer> PLAYER_RIDING_COOL_DOWN = new HashMap<>();
 
 	public static void tick() {
+		if (pendingRailTimestamp > 0 && System.currentTimeMillis() - pendingRailTimestamp > RAIL_MERGE_DELAY_MS) {
+			RAILS.clear();
+			for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : pendingRailMerge.entrySet()) {
+				RAILS.put(entry.getKey(), entry.getValue());
+			}
+			pendingRailMerge.clear();
+			pendingRailTimestamp = 0;
+		}
+
 		final Set<UUID> playersToRemove = new HashSet<>();
 		PLAYER_RIDING_COOL_DOWN.forEach((uuid, coolDown) -> {
 			if (coolDown <= 0) {
@@ -83,14 +96,26 @@ public final class ClientData {
 
 	public static void writeRails(Minecraft client, FriendlyByteBuf packet) {
 		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = readRailsFromPacket(packet);
-		client.execute(() -> clearAndAddAll(RAILS, railsTemp));
+		client.execute(() -> {
+			pendingRailMerge.clear();
+			for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
+				pendingRailMerge.put(entry.getKey(), entry.getValue());
+			}
+			pendingRailTimestamp = System.currentTimeMillis();
+		});
 	}
 
 	public static void appendRails(Minecraft client, FriendlyByteBuf packet) {
 		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = readRailsFromPacket(packet);
 		client.execute(() -> {
-			for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
-				RAILS.put(entry.getKey(), entry.getValue());
+			if (pendingRailTimestamp > 0) {
+				for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
+					pendingRailMerge.put(entry.getKey(), entry.getValue());
+				}
+			} else {
+				for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
+					RAILS.put(entry.getKey(), entry.getValue());
+				}
 			}
 		});
 	}
