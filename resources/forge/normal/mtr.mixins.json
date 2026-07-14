@@ -11,7 +11,9 @@
 		"LevelRendererMixin",
 		"PlayerRendererOffsetMixin"
 	],
-	"server": [],
+	"server": [
+		"SHMetroMixin"
+	],
 	"injectors": {
 		"defaultRequire": 1
 	}

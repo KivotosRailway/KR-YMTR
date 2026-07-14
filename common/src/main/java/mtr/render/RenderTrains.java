@@ -196,7 +196,12 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 
 				final boolean isLightRailRoute = thisRoute.isLightRailRoute;
 				if (lastStation != null) {
-					messages.add(IGui.insertTranslation("gui.mtr.last_station_announcement_cjk", "gui.mtr.last_station_announcement", 1, lastStation.name));
+					if (thisRoute.circularState == Route.CircularState.NONE) {
+						messages.add(IGui.insertTranslation("gui.mtr.last_station_announcement_cjk", "gui.mtr.last_station_announcement", 1, lastStation.name));
+					} else {
+						final String direction = thisRoute.circularState == Route.CircularState.CLOCKWISE ? "clockwise" : "anticlockwise";
+						messages.add(Text.translatable("gui.mtr.circular_announcement_" + direction + "_cjk").getString() + "|" + Text.translatable("gui.mtr.circular_announcement_" + direction).getString());
+					}
 				}
 				messages.add(IGui.insertTranslation(isLightRailRoute ? "gui.mtr.next_station_light_rail_announcement_cjk" : "gui.mtr.next_station_announcement_cjk", isLightRailRoute ? "gui.mtr.next_station_light_rail_announcement" : "gui.mtr.next_station_announcement", 1, nextStation.name));
 

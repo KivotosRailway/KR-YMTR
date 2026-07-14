@@ -102,7 +102,10 @@ public interface IGui {
 		}
 
 		final StringBuilder result = new StringBuilder();
-		dataCJK.forEach(combinedArguments -> {
+		final List<String[]> dataToUseForCJK = dataCJK.isEmpty() ? data : dataCJK;
+		final List<String[]> dataToUseForNonCJK = data.isEmpty() ? dataCJK : data;
+
+		dataToUseForCJK.forEach(combinedArguments -> {
 			if (Arrays.stream(combinedArguments).allMatch(Objects::nonNull)) {
 				result.append("|");
 				if (overrideFirst == null) {
