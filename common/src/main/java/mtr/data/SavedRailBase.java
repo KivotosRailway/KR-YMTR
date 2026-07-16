@@ -17,6 +17,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 	protected int dwellTime;
 	protected int adcTime;
 	protected boolean stopWithoutOpeningDoors;
+	protected int psdDisplayMode;
 	private final Set<BlockPos> positions;
 
 	public static final int MAX_DWELL_TIME = 1200;
@@ -28,6 +29,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 	private static final String KEY_POS_2 = "pos_2";
 	private static final String KEY_DWELL_TIME = "dwell_time";
 	private static final String KEY_ADC_TIME = "adc_time";
+	private static final String KEY_PSD_DISPLAY_MODE = "psd_display_mode";
 
 	public SavedRailBase(long id, TransportMode transportMode, BlockPos pos1, BlockPos pos2) {
 		super(id, transportMode);
@@ -60,6 +62,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		dwellTime = transportMode.continuousMovement ? 1 : messagePackHelper.getInt(KEY_DWELL_TIME);
 		adcTime = messagePackHelper.getInt(KEY_ADC_TIME);
 		stopWithoutOpeningDoors = map.containsKey(KEY_STOP_WITHOUT_OPENING_DOORS) && messagePackHelper.getBoolean(KEY_STOP_WITHOUT_OPENING_DOORS);
+		psdDisplayMode = messagePackHelper.getInt(KEY_PSD_DISPLAY_MODE);
 	}
 
 	@Deprecated
@@ -71,6 +74,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		dwellTime = transportMode.continuousMovement ? 1 : compoundTag.getInt(KEY_DWELL_TIME);
 		adcTime = compoundTag.getInt(KEY_ADC_TIME);
 		stopWithoutOpeningDoors = compoundTag.getBoolean(KEY_STOP_WITHOUT_OPENING_DOORS);
+		psdDisplayMode = compoundTag.getInt(KEY_PSD_DISPLAY_MODE);
 	}
 
 	public SavedRailBase(FriendlyByteBuf packet) {
@@ -83,6 +87,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		adcTime = packet.readInt();
 		adcTime = transportMode.continuousMovement ? 0 : adcTime;
 		stopWithoutOpeningDoors = packet.readBoolean();
+		psdDisplayMode = packet.readInt();
 	}
 
 	@Override
@@ -94,11 +99,12 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		messagePacker.packString(KEY_DWELL_TIME).packInt(dwellTime);
 		messagePacker.packString(KEY_ADC_TIME).packInt(adcTime);
 		messagePacker.packString(KEY_STOP_WITHOUT_OPENING_DOORS).packBoolean(stopWithoutOpeningDoors);
+		messagePacker.packString(KEY_PSD_DISPLAY_MODE).packInt(psdDisplayMode);
 	}
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 5;
+		return super.messagePackLength() + 6;
 	}
 
 	@Override
@@ -109,6 +115,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 		packet.writeInt(dwellTime);
 		packet.writeInt(adcTime);
 		packet.writeBoolean(stopWithoutOpeningDoors);
+		packet.writeInt(psdDisplayMode);
 	}
 
 	@Override
@@ -190,6 +197,10 @@ public abstract class SavedRailBase extends NameColorDataBase {
 
 	public boolean getStopWithoutOpeningDoors() {
 		return stopWithoutOpeningDoors;
+	}
+
+	public int getPsdDisplayMode() {
+		return psdDisplayMode;
 	}
 
 	public void setStopWithoutOpeningDoors(boolean stopWithoutOpeningDoors) {

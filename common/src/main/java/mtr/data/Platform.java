@@ -13,6 +13,7 @@ public final class Platform extends SavedRailBase {
 
 	private static final String KEY_DWELL_TIME = "dwell_time";
 	private static final String KEY_ADC_TIME = "adc_time";
+	private static final String KEY_PSD_DISPLAY_MODE = "psd_display_mode";
 
 	public Platform(long id, TransportMode transportMode, BlockPos pos1, BlockPos pos2) {
 		super(id, transportMode, pos1, pos2);
@@ -47,6 +48,8 @@ public final class Platform extends SavedRailBase {
 			adcTime = transportMode.continuousMovement ? 0 : adcTime;
 		} else if (KEY_STOP_WITHOUT_OPENING_DOORS.equals(key)) {
 			stopWithoutOpeningDoors = packet.readBoolean();
+		} else if (KEY_PSD_DISPLAY_MODE.equals(key)) {
+			psdDisplayMode = packet.readInt();
 		} else {
 			super.update(key, packet);
 		}
@@ -86,6 +89,16 @@ public final class Platform extends SavedRailBase {
 		packet.writeUtf(transportMode.toString());
 		packet.writeUtf(KEY_STOP_WITHOUT_OPENING_DOORS);
 		packet.writeBoolean(stopWithoutOpeningDoors);
+		sendPacket.accept(packet);
+	}
+
+	public void setPsdDisplayMode(int newPsdDisplayMode, Consumer<FriendlyByteBuf> sendPacket) {
+		psdDisplayMode = newPsdDisplayMode;
+		final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+		packet.writeLong(id);
+		packet.writeUtf(transportMode.toString());
+		packet.writeUtf(KEY_PSD_DISPLAY_MODE);
+		packet.writeInt(psdDisplayMode);
 		sendPacket.accept(packet);
 	}
 }

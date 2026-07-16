@@ -402,6 +402,13 @@ public class RouteMapGenerator implements IGui {
 				setup(stationPositions, flip ? stationsIdsBefore : stationsIdsAfter, colorIndices, bounds, flip, true);
 				final float xOffset = bounds[0] + 0.5F;
 				setup(stationPositions, flip ? stationsIdsAfter : stationsIdsBefore, colorIndices, bounds, !flip, false);
+				final Map<Integer, Object[]> loopData = new HashMap<>();
+				for (int routeIndex = 0; routeIndex < routeCount; routeIndex++) {
+					final Route route = routeDetails.get(routeIndex).getA();
+					if (route.platformIds.size() >= 3 && route.circularState != Route.CircularState.NONE) {
+						loopData.put(routeIndex, computeLoopData(route, routeDetails.get(routeIndex).getB(), routeIndex, colorIndices, bounds, flip));
+					}
+				}
 				final float rawHeightPart = Math.abs(bounds[1]) + (vertical ? 0.6F : 1);
 				final float rawWidth = xOffset + bounds[0] + 0.5F;
 				final float rawHeightTotal = rawHeightPart + bounds[2] + (vertical ? 0.6F : 1);
@@ -441,8 +448,44 @@ public class RouteMapGenerator implements IGui {
 				final NativeImage nativeImage = new NativeImage(NativeImage.Format.RGBA, width, height, false);
 				nativeImage.fillRect(0, 0, width, height, ARGB_WHITE);
 
+				for (int ri = 0; ri < routeCount; ri++) {
+					final Object[] data = loopData.get(ri);
+					if (data != null) {
+						final Route rte = routeDetails.get(ri).getA();
+						final java.util.List<float[]> sl = (java.util.List<float[]>) data[0];
+						final float lcx = (float) data[1];
+						final float rcx = (float) data[2];
+						final float rad = (float) data[3];
+						final float ry = (float) data[4];
+						final int color = ARGB_BLACK | rte.color;
+						drawLoopOutline(nativeImage, lcx, rcx, rad, ry, widthScale, heightScale, xOffset, yOffset, color);
+
+						for (float[] sp : sl) {
+							final boolean isArcStation = sp.length >= 5 && sp[4] == 1.0f;
+							final float stationScaleX = isArcStation ? heightScale : widthScale;
+							final int sx = Math.round((sp[0] + xOffset) * scale * stationScaleX);
+							final int sy = Math.round((sp[1] + yOffset) * scale * heightScale);
+							final boolean passed = sp[2] < 0;
+							final boolean isCur = sp[2] == 0;
+							drawStation(nativeImage, sx, sy, heightScale, 0, passed);
+							final long stId = (long) sp[3];
+							if (stId != -1) {
+								final Station st = clientCache.stationIdMap.get(stId);
+								if (st != null) {
+									final int msw = (int) (scale * 0.9 * ((vertical ? heightScale : widthScale) / 2));
+									final int[] dims = new int[2];
+									final byte[] pix = clientCache.getTextPixels(st.name, dims, msw, (int) ((fontSizeBig + fontSizeSmall) * ClientCache.LINE_HEIGHT_MULTIPLIER), fontSizeBig, fontSizeSmall, fontSizeSmall / 4, vertical ? HorizontalAlignment.RIGHT : HorizontalAlignment.CENTER);
+									final boolean txtBelow = vertical || sy >= yOffset * scale;
+									drawString(nativeImage, pix, sx, sy + (txtBelow ? 1 : -1) * lineSize * 5 / 4, dims, HorizontalAlignment.CENTER, txtBelow ? VerticalAlignment.TOP : VerticalAlignment.BOTTOM, isCur ? ARGB_BLACK : 0, passed ? ARGB_LIGHT_GRAY : isCur ? ARGB_WHITE : ARGB_BLACK, vertical);
+								}
+							}
+						}
+					}
+				}
+
 				final Map<Long, Set<StationPositionGrouped>> stationPositionsGrouped = new HashMap<>();
 				for (int routeIndex = 0; routeIndex < routeCount; routeIndex++) {
+					if (loopData.containsKey(routeIndex)) continue;
 					final Route route = routeDetails.get(routeIndex).getA();
 					final int currentIndex = routeDetails.get(routeIndex).getB();
 					final Map<Integer, StationPosition> routeStationPositions = stationPositions.get(routeIndex);
@@ -597,6 +640,137 @@ public class RouteMapGenerator implements IGui {
 					stationPositions.get(routeIndex).put(passedMultiplier * traverseIndex[routeIndex], new StationPosition(reverseMultiplier * positionXOffset / 2F, stationY, true));
 				}
 				bounds[0] = positionXOffset / 2F;
+			}
+		}
+	}
+
+	private static Object[] computeLoopData(Route route, int currentStationIndex, int routeIndex, int[] colorIndices, float[] bounds, boolean flip) {
+		final List<Route.RoutePlatform> platformIds = route.platformIds;
+		final int totalPlatforms = platformIds.size();
+		final int uniqueCount = totalPlatforms - 1;
+		if (uniqueCount < 3) return null;
+
+		final float radius = 1.0F;
+		final float spacing = 0.5F;
+		final float MIN_STRAIGHT = 1.0F;
+		final float routeY = getLineOffset(routeIndex, colorIndices);
+		final float targetPerimeter = uniqueCount * spacing;
+		final float straight = Math.max(MIN_STRAIGHT, (targetPerimeter - 2 * Mth.PI * radius) / 2);
+		final float totalPerimeter = 2 * Mth.PI * radius + 2 * straight;
+
+		final float leftCx = radius;
+		final float rightCx = straight + radius;
+		final float bottomLen = straight;
+		final float arcLen = Mth.PI * radius;
+
+		final List<float[]> stationList = new ArrayList<>();
+
+		for (int i = 0; i < uniqueCount; i++) {
+			final float d = (i + 0.5F) / uniqueCount * totalPerimeter;
+			float px, py;
+			float isArc = 0f;
+
+			if (d <= bottomLen) {
+				final float t = d / bottomLen;
+				px = leftCx + t * straight;
+				py = routeY + radius;
+			} else if (d <= bottomLen + arcLen) {
+				final float t = (d - bottomLen) / arcLen;
+				final float angle = Mth.HALF_PI - t * Mth.PI;
+				px = rightCx + radius * Mth.cos(angle);
+				py = routeY + radius * Mth.sin(angle);
+				isArc = 1f;
+			} else if (d <= bottomLen * 2 + arcLen) {
+				final float t = (d - bottomLen - arcLen) / bottomLen;
+				px = rightCx - t * straight;
+				py = routeY - radius;
+			} else {
+				final float t = (d - bottomLen * 2 - arcLen) / arcLen;
+				final float angle = -Mth.HALF_PI - t * Mth.PI;
+				px = leftCx + radius * Mth.cos(angle);
+				py = routeY + radius * Mth.sin(angle);
+				isArc = 1f;
+			}
+
+			final float stationOffset = i - currentStationIndex;
+			final long stationId = getStationId(platformIds.get(i).platformId);
+			stationList.add(new float[]{px, py, stationOffset, (float) stationId, isArc});
+
+			bounds[0] = Math.max(bounds[0], px);
+			bounds[1] = Math.min(bounds[1], py);
+			bounds[2] = Math.max(bounds[2], py);
+		}
+
+		final int dupOffset = (totalPlatforms - 1) - currentStationIndex;
+		if (dupOffset != 0 - currentStationIndex && !stationList.isEmpty()) {
+			final float[] first = stationList.get(0);
+			stationList.add(new float[]{first[0], first[1], (float) dupOffset, first[3], first[4]});
+		}
+
+		return new Object[]{stationList, leftCx, rightCx, radius, routeY};
+	}
+
+	private static void drawLoopOutline(NativeImage nativeImage, float leftCx, float rightCx, float radius, float routeY, float widthScale, float heightScale, float xOffset, float yOffset, int color) {
+		final int arcSegments = 32;
+		final int halfH = lineSize / 2;
+		
+		drawLoopEdge(nativeImage,
+				Math.round((leftCx + xOffset) * scale * widthScale),
+				Math.round((routeY + radius + yOffset) * scale * heightScale),
+				Math.round((rightCx + xOffset) * scale * widthScale),
+				Math.round((routeY + radius + yOffset) * scale * heightScale),
+				halfH, color);
+		drawLoopEdge(nativeImage,
+				Math.round((rightCx + xOffset) * scale * widthScale),
+				Math.round((routeY - radius + yOffset) * scale * heightScale),
+				Math.round((leftCx + xOffset) * scale * widthScale),
+				Math.round((routeY - radius + yOffset) * scale * heightScale),
+				halfH, color);
+
+		for (int i = 0; i < arcSegments; i++) {
+			final float a1 = Mth.HALF_PI - (float) i / arcSegments * Mth.PI;
+			final float a2 = Mth.HALF_PI - (float) (i + 1) / arcSegments * Mth.PI;
+			final int x1 = Math.round((rightCx + xOffset) * scale * widthScale + radius * Mth.cos(a1) * scale * heightScale);
+			final int y1 = Math.round((routeY + yOffset) * scale * heightScale + radius * Mth.sin(a1) * scale * heightScale);
+			final int x2 = Math.round((rightCx + xOffset) * scale * widthScale + radius * Mth.cos(a2) * scale * heightScale);
+			final int y2 = Math.round((routeY + yOffset) * scale * heightScale + radius * Mth.sin(a2) * scale * heightScale);
+			drawLoopEdge(nativeImage, x1, y1, x2, y2, halfH, color);
+		}
+
+		for (int i = 0; i < arcSegments; i++) {
+			final float a3 = -Mth.HALF_PI - (float) i / arcSegments * Mth.PI;
+			final float a4 = -Mth.HALF_PI - (float) (i + 1) / arcSegments * Mth.PI;
+			final int x3 = Math.round((leftCx + xOffset) * scale * widthScale + radius * Mth.cos(a3) * scale * heightScale);
+			final int y3 = Math.round((routeY + yOffset) * scale * heightScale + radius * Mth.sin(a3) * scale * heightScale);
+			final int x4 = Math.round((leftCx + xOffset) * scale * widthScale + radius * Mth.cos(a4) * scale * heightScale);
+			final int y4 = Math.round((routeY + yOffset) * scale * heightScale + radius * Mth.sin(a4) * scale * heightScale);
+			drawLoopEdge(nativeImage, x3, y3, x4, y4, halfH, color);
+		}
+	}
+
+	private static void drawLoopEdge(NativeImage nativeImage, int x1, int y1, int x2, int y2, int halfH, int color) {
+		final int dx = x2 - x1;
+		final int dy = y2 - y1;
+		final int steps = Math.max(Math.abs(dx), Math.abs(dy));
+		if (steps == 0) {
+			for (int ox = -halfH; ox <= halfH; ox++) {
+				for (int oy = -halfH; oy <= halfH; oy++) {
+					if (ox * ox + oy * oy <= halfH * halfH) {
+						drawPixelSafe(nativeImage, x1 + ox, y1 + oy, color);
+					}
+				}
+			}
+			return;
+		}
+		for (int s = 0; s <= steps; s++) {
+			final int px = x1 + dx * s / steps;
+			final int py = y1 + dy * s / steps;
+			for (int ox = -halfH; ox <= halfH; ox++) {
+				for (int oy = -halfH; oy <= halfH; oy++) {
+					if (ox * ox + oy * oy <= halfH * halfH) {
+						drawPixelSafe(nativeImage, px + ox, py + oy, color);
+					}
+				}
 			}
 		}
 	}

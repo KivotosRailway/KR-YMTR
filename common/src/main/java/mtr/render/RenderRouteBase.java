@@ -73,13 +73,20 @@ public abstract class RenderRouteBase<T extends BlockPSDTop.TileEntityRouteBase>
 				final int color = getShadingColor(facing, ARGB_WHITE);
 				final RenderType renderType = getRenderType(world, pos.relative(facing.getCounterClockWise(), leftBlocks), state);
 
-				if ((renderType == RenderType.ARROW || renderType == RenderType.ROUTE) && IBlock.getStatePropertySafe(state, SIDE_EXTENDED) != EnumSide.SINGLE) {
+				if ((renderType == RenderType.ARROW || renderType == RenderType.ROUTE || renderType == RenderType.STATION_NAME) && IBlock.getStatePropertySafe(state, SIDE_EXTENDED) != EnumSide.SINGLE) {
 					final float width = leftBlocks + rightBlocks + 1 - sidePadding * 2;
 					final float height = 1 - topPadding - bottomPadding;
 					final int arrowDirection = IBlock.getStatePropertySafe(state, arrowDirectionProperty);
 
 					final ResourceLocation resourceLocation;
-					if (renderType == RenderType.ARROW) {
+					if (renderType == RenderType.STATION_NAME) {
+						final String stationName = getStationNameForRendering(platformId);
+						if (stationName != null) {
+							resourceLocation = ClientData.DATA_CACHE.getStationName(stationName, width / height).resourceLocation;
+						} else {
+							resourceLocation = ClientData.DATA_CACHE.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, transparentWhite ? ARGB_WHITE : 0).resourceLocation;
+						}
+					} else if (renderType == RenderType.ARROW) {
 						resourceLocation = ClientData.DATA_CACHE.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, transparentWhite ? ARGB_WHITE : 0).resourceLocation;
 					} else {
 						resourceLocation = ClientData.DATA_CACHE.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).resourceLocation;
@@ -87,7 +94,7 @@ public abstract class RenderRouteBase<T extends BlockPSDTop.TileEntityRouteBase>
 
 					RenderTrains.scheduleRender(resourceLocation, false, RenderTrains.QueuedRenderLayer.EXTERIOR, (matricesNew, vertexConsumer) -> {
 						storedMatrixTransformations.transform(matricesNew);
-						IDrawing.drawTexture(matricesNew, vertexConsumer, leftBlocks == 0 ? sidePadding : 0, topPadding, 0, 1 - (rightBlocks == 0 ? sidePadding : 0), 1 - bottomPadding, 0, (leftBlocks - (leftBlocks == 0 ? 0 : sidePadding)) / width, 0, (width - rightBlocks + (rightBlocks == 0 ? 0 : sidePadding)) / width, 1, facing.getOpposite(), color, light);
+						IDrawing.drawTexture(matricesNew, vertexConsumer, leftBlocks == 0 ? sidePadding : 0, topPadding, 0, 1 - (rightBlocks == 0 ? sidePadding : 0), 1 - bottomPadding, 0, (leftBlocks - (leftBlocks == 0 ? 0 : sidePadding)) / width, 0, (width - rightBlocks + (rightBlocks == 0 ? 0 : sidePadding)) / width, 1, facing.getOpposite(), getTintColorForRendering(renderType, facing, color), light);
 						matricesNew.popPose();
 					});
 				}
@@ -121,6 +128,14 @@ public abstract class RenderRouteBase<T extends BlockPSDTop.TileEntityRouteBase>
 
 	protected abstract void renderAdditional(StoredMatrixTransformations storedMatrixTransformations, long platformId, BlockState state, int leftBlocks, int rightBlocks, Direction facing, int color, int light);
 
+	protected String getStationNameForRendering(long platformId) {
+		return null;
+	}
+
+	protected int getTintColorForRendering(RenderType renderType, Direction facing, int baseColor) {
+		return baseColor;
+	}
+
 	private int getTextureNumber(BlockGetter world, BlockPos pos, Direction facing, boolean searchLeft) {
 		int number = 0;
 		final Block thisBlock = world.getBlockState(pos).getBlock();
@@ -153,5 +168,5 @@ public abstract class RenderRouteBase<T extends BlockPSDTop.TileEntityRouteBase>
 		return ARGB_BLACK | ((colorByte << 16) + (colorByte << 8) + colorByte);
 	}
 
-	protected enum RenderType {ARROW, ROUTE, NONE}
+	protected enum RenderType {ARROW, ROUTE, NONE, STATION_NAME}
 }

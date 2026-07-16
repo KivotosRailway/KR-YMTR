@@ -6,6 +6,8 @@ import mtr.block.BlockPSDTop;
 import mtr.block.IBlock;
 import mtr.client.ClientData;
 import mtr.client.IDrawing;
+import mtr.data.Platform;
+import mtr.data.Station;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -34,7 +36,7 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 		if (persistent == BlockPSDTop.EnumPersistent.NONE) {
 			final Block blockBelow = world.getBlockState(pos.below()).getBlock();
 			if (blockBelow instanceof BlockPSDAPGDoorBase) {
-				return RenderType.ARROW;
+				return RenderType.STATION_NAME;
 			} else if (!(blockBelow instanceof BlockPSDAPGGlassEndBase)) {
 				return RenderType.ROUTE;
 			} else {
@@ -120,5 +122,23 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 	@Override
 	protected float getAdditionalOffset(BlockState state) {
 		return IBlock.getStatePropertySafe(state, BlockPSDTop.PERSISTENT) == BlockPSDTop.EnumPersistent.NONE ? 0 : BlockPSDTop.PERSISTENT_OFFSET_SMALL;
+	}
+
+	@Override
+	protected String getStationNameForRendering(long platformId) {
+		final Platform platform = ClientData.DATA_CACHE.platformIdMap.get(platformId);
+		if (platform == null || platform.getPsdDisplayMode() != 1) {
+			return null;
+		}
+		final Station station = ClientData.DATA_CACHE.platformIdToStation.get(platformId);
+		return station == null ? null : station.name;
+	}
+
+	@Override
+	protected int getTintColorForRendering(RenderType renderType, Direction facing, int baseColor) {
+		if (renderType == RenderType.STATION_NAME) {
+			return ARGB_BLACK;
+		}
+		return baseColor;
 	}
 }
