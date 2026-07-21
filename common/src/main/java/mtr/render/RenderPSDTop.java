@@ -133,12 +133,4 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 		final Station station = ClientData.DATA_CACHE.platformIdToStation.get(platformId);
 		return station == null ? null : station.name;
 	}
-
-	@Override
-	protected int getTintColorForRendering(RenderType renderType, Direction facing, int baseColor) {
-		if (renderType == RenderType.STATION_NAME) {
-			return ARGB_BLACK;
-		}
-		return baseColor;
-	}
 }

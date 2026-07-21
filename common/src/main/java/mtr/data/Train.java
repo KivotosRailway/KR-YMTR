@@ -582,6 +582,11 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							manualNotch = B2;
 						}
 
+						if (isManualBrakingToReversal) {
+							isManualBrakingToReversal = false;
+							reversalTargetIndex = -1;
+						}
+
 						final boolean isOppositeRail = isOppositeRail();
 						final boolean railBlocked = isRailBlocked(getIndex(0, spacing, true) + (isOppositeRail ? 2 : 1));
 
@@ -609,7 +614,7 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						}
 					}
 					else {
-						if (!world.isClientSide()) {
+						if (!world.isClientSide() && !isManualBrakingToReversal) {
 							final int checkIndex = getIndex(0, spacing, true) + 1;
 							if (isRailBlocked(checkIndex)) {
 								nextStoppingIndex = checkIndex - 1;
@@ -628,24 +633,38 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 
 						final double stoppingDistance = distances.get(nextStoppingIndex) - railProgress;
 
-						if (!transportMode.continuousMovement && stoppingDistance < 0.5 * speed * speed / accelerationConstant) {
-							if (!isCurrentlyManual || (isReversalPoint)) {
-								if (!wasDecelerating) {
+						if (!transportMode.continuousMovement && (stoppingDistance < 0.5 * speed * speed / accelerationConstant || isManualBrakingToReversal)) {
+							if (!isCurrentlyManual || isReversalPoint || isManualBrakingToReversal) {
+								if (!wasDecelerating && !isManualBrakingToReversal) {
 									wasDecelerating = true;
 									debugStopReport(world, "gui.mtr.debug_decel_start", "dist=" + String.format("%.1f", stoppingDistance));
 								}
 								speed = stoppingDistance <= 0 ? Train.ACCELERATION_DEFAULT : (float) Math.max(speed - (0.5 * speed * speed / stoppingDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
 								manualNotch = EB;
+
+								if (isCurrentlyManual && isReversalPoint && !isManualBrakingToReversal) {
+									isManualBrakingToReversal = true;
+									reversalTargetIndex = nextStoppingIndex;
+								}
 							} else {
+								if (isManualBrakingToReversal) {
+									isManualBrakingToReversal = false;
+									reversalTargetIndex = -1;
+								}
+								wasDecelerating = false;
 								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
 									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							}
 						} else {
+							if (isManualBrakingToReversal) {
+								isManualBrakingToReversal = false;
+								reversalTargetIndex = -1;
+							}
 							wasDecelerating = false;
 							if (isCurrentlyManual) {
-								if (manualNotch >= EB) {
+								if (manualNotch >= EB && !isManualBrakingToReversal) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
 									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
@@ -681,7 +700,18 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							isReversalPointNow = true;
 						}
 
-						if (!isCurrentlyManual || isReversalPointNow) {
+						if (isManualBrakingToReversal) {
+							if (reversalTargetIndex >= 0 && reversalTargetIndex < path.size()) {
+								railProgress = distances.get(reversalTargetIndex);
+							} else {
+								railProgress = distances.get(nextStoppingIndex);
+							}
+							speed = 0;
+							manualNotch = -2;
+							debugStopReport(world, "gui.mtr.debug_reached_stop", "manual_reversal");
+							isManualBrakingToReversal = false;
+							reversalTargetIndex = -1;
+						} else if (!isCurrentlyManual || isReversalPointNow) {
 							railProgress = distances.get(nextStoppingIndex);
 							speed = 0;
 							manualNotch = -2;
@@ -764,6 +794,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 	private int lastReportedStopIndex = -1;
 	private String lastReportedStopReason = "";
 	private boolean wasDecelerating;
+	protected boolean isManualBrakingToReversal = false;
+	protected int reversalTargetIndex = -1;
 
 	private void debugStopReport(Level world, String reasonKey, String details) {
 		final String dedupKey = reasonKey + "@" + nextStoppingIndex;

@@ -78,9 +78,10 @@ public abstract class RenderRouteBase<T extends BlockPSDTop.TileEntityRouteBase>
 					final float height = 1 - topPadding - bottomPadding;
 					final int arrowDirection = IBlock.getStatePropertySafe(state, arrowDirectionProperty);
 
+					final String stationName = renderType == RenderType.STATION_NAME ? getStationNameForRendering(platformId) : null;
+
 					final ResourceLocation resourceLocation;
 					if (renderType == RenderType.STATION_NAME) {
-						final String stationName = getStationNameForRendering(platformId);
 						if (stationName != null) {
 							resourceLocation = ClientData.DATA_CACHE.getStationName(stationName, width / height).resourceLocation;
 						} else {
@@ -92,9 +93,16 @@ public abstract class RenderRouteBase<T extends BlockPSDTop.TileEntityRouteBase>
 						resourceLocation = ClientData.DATA_CACHE.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).resourceLocation;
 					}
 
+					final int renderColor = (renderType == RenderType.STATION_NAME && stationName != null) ? ARGB_BLACK : color;
+
 					RenderTrains.scheduleRender(resourceLocation, false, RenderTrains.QueuedRenderLayer.EXTERIOR, (matricesNew, vertexConsumer) -> {
 						storedMatrixTransformations.transform(matricesNew);
-						IDrawing.drawTexture(matricesNew, vertexConsumer, leftBlocks == 0 ? sidePadding : 0, topPadding, 0, 1 - (rightBlocks == 0 ? sidePadding : 0), 1 - bottomPadding, 0, (leftBlocks - (leftBlocks == 0 ? 0 : sidePadding)) / width, 0, (width - rightBlocks + (rightBlocks == 0 ? 0 : sidePadding)) / width, 1, facing.getOpposite(), getTintColorForRendering(renderType, facing, color), light);
+						IDrawing.drawTexture(matricesNew, vertexConsumer,
+								leftBlocks == 0 ? sidePadding : 0, topPadding, 0,
+								1 - (rightBlocks == 0 ? sidePadding : 0), 1 - bottomPadding, 0,
+								(leftBlocks - (leftBlocks == 0 ? 0 : sidePadding)) / width, 0,
+								(width - rightBlocks + (rightBlocks == 0 ? 0 : sidePadding)) / width, 1,
+								facing.getOpposite(), renderColor, light);
 						matricesNew.popPose();
 					});
 				}
