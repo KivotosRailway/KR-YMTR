@@ -397,6 +397,8 @@ public class TrainClient extends Train implements IGui {
 		isCurrentlyManual = train.isCurrentlyManual;
 		manualNotch = train.manualNotch;
 		useLegacyManualNotch = train.useLegacyManualNotch;
+		isManualBrakingToReversal = train.isManualBrakingToReversal;
+		reversalTargetIndex = train.reversalTargetIndex;
 	}
 
 	public final float speedChange() {

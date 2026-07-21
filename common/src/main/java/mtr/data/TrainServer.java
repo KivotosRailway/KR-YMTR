@@ -351,7 +351,7 @@ public class TrainServer extends Train {
 		if (isManualAllowed) {
 			if (isOnRoute) {
 				if (manualCoolDown >= manualToAutomaticTime * 10) {
-					if (isCurrentlyManual) {
+					if (isCurrentlyManual && !isManualBrakingToReversal) {
 						if (nextStoppingIndex < path.size() && railProgress > distances.get(nextStoppingIndex) && !path.get(nextStoppingIndex).isOppositeRail(path.get(Math.min(nextStoppingIndex + 1, path.size() - 1)))) {
 							int newIndex = -1;
 							for (int i = nextStoppingIndex + 1; i < path.size(); i++) {
@@ -370,7 +370,9 @@ public class TrainServer extends Train {
 							elapsedDwellTicks = doorTarget ? dwellTicks / 2F : dwellTicks;
 						}
 					}
-					isCurrentlyManual = false;
+					if (!isManualBrakingToReversal) {
+						isCurrentlyManual = false;
+					}
 				} else {
 					manualCoolDown++;
 					isCurrentlyManual = true;
