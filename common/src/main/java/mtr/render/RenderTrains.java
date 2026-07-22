@@ -64,6 +64,7 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	private static final int MAX_RADIUS_REPLAY_MOD = 64 * 16;
 	private static final int TICKS_PER_SECOND = 20;
 	private static final int DISMOUNT_PROGRESS_BAR_LENGTH = 30;
+	private static final float MAX_FRAME_DELTA = 3.0F;
 	private static final int TOTAL_RENDER_STAGES = 2;
 	private static final List<List<Map<ResourceLocation, Set<BiConsumer<PoseStack, VertexConsumer>>>>> RENDERS = new ArrayList<>(TOTAL_RENDER_STAGES);
 	private static final List<List<Map<ResourceLocation, Set<BiConsumer<PoseStack, VertexConsumer>>>>> CURRENT_RENDERS = new ArrayList<>(TOTAL_RENDER_STAGES);
@@ -127,7 +128,7 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 		}
 
 		final float lastFrameDuration = MTRClient.getLastFrameDuration();
-		final float newLastFrameDuration = client.isPaused() || lastRenderedTick == MTRClient.getGameTick() ? 0 : lastFrameDuration;
+		final float newLastFrameDuration = client.isPaused() || lastRenderedTick == MTRClient.getGameTick() ? 0 : Math.min(lastFrameDuration, MAX_FRAME_DELTA);
 		final boolean useAnnouncements = Config.useTTSAnnouncements() || Config.showAnnouncementMessages();
 
 		final int configuredDistance = Config.getTrainRenderDistanceBlocks();

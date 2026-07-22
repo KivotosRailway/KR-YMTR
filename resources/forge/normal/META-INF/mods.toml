@@ -1,12 +1,12 @@
 modLoader = "javafml"
 loaderVersion = "[36,)"
-license = "MIT"
+license = "All Rights Reserved"
 
 [[mods]]
 modId = "mtr"
 version = "${version}"
 displayName = "Yomi's Minecraft Transit Railway"
-authors = "Jonathan Ho"
+authors = "Jonathan Ho, Yomi_307"
 description = "A Minecraft mod that adds automated train systems into the game."
 logoFile = "icon.png"
 

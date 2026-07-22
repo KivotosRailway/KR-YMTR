@@ -41,6 +41,10 @@ public abstract class TrainRendererBase {
 	private static LocalPlayer player;
 	private static Vec3 playerEyePosition;
 
+	private static boolean flipActive;
+	private static final float FLIP_THRESHOLD_UP = 100;
+	private static final float FLIP_THRESHOLD_DOWN = 80;
+
 	public abstract TrainRendererBase createTrainInstance(TrainClient train);
 
 	public abstract void renderCar(int carIndex, double x, double y, double z, float yaw, float pitch, boolean doorLeftOpen, boolean doorRightOpen);
@@ -108,8 +112,15 @@ public abstract class TrainRendererBase {
 				offsetZ = cameraOffset.z;
 			}
 			final float cameraYaw = camera.getYRot();
+			final float yawDiff = Utilities.getYaw(player) - cameraYaw;
+			final float absYawDiff = Math.abs(yawDiff);
+			if (absYawDiff > FLIP_THRESHOLD_UP) {
+				flipActive = true;
+			} else if (absYawDiff < FLIP_THRESHOLD_DOWN) {
+				flipActive = false;
+			}
 			matrices.translate(offsetX, offsetY, offsetZ);
-			UtilitiesClient.rotateYDegrees(matrices, Utilities.getYaw(player) - cameraYaw + (Math.abs(Utilities.getYaw(player) - cameraYaw) > 90 ? 180 : 0));
+			UtilitiesClient.rotateYDegrees(matrices, yawDiff + (flipActive ? 180 : 0));
 			matrices.translate(-viewOffset.x, -viewOffset.y, -viewOffset.z);
 		}
 
