@@ -72,8 +72,9 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 	private final Map<Long, List<ScheduleEntry>> schedulesForPlatform = new HashMap<>();
 	private final Map<Long, Map<BlockPos, TrainDelay>> trainDelays = new HashMap<>();
 
-	private static final int RAIL_UPDATE_DISTANCE = 2112;
+	private static final int RAIL_UPDATE_DISTANCE = 2560;
 	private static final int PLAYER_MOVE_UPDATE_THRESHOLD = 16;
+	private static final int RAIL_CHUNK_SIZE = 262144;
 	private static final int SCHEDULE_UPDATE_TICKS = 60;
 
 	private static final int DATA_VERSION = 1;
@@ -498,7 +499,7 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 			return;
 		}
 
-		final int MAX_SAFE = MAX_PACKET_BYTES - 4096;
+		final int MAX_SAFE = Math.min(MAX_PACKET_BYTES - 4096, RAIL_CHUNK_SIZE);
 		final List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> entries = new ArrayList<>(railsToAdd.entrySet());
 		final List<List<Map.Entry<BlockPos, Map<BlockPos, Rail>>>> chunks = new ArrayList<>();
 		List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> currentChunk = new ArrayList<>();

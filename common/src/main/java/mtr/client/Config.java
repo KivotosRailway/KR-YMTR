@@ -36,7 +36,7 @@ public class Config {
 
 	private static int railRenderDistance = 7;
 	private static final int DEFAULT_RAIL_RENDER_DISTANCE = 7;
-	public static final int RAIL_RENDER_DISTANCE_COUNT = 64;
+	public static final int RAIL_RENDER_DISTANCE_COUNT = 80;
 	private static final int RAIL_RENDER_DISTANCE_STEP = 32;
 	private static final Path CONFIG_FILE_PATH = Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve("mtr.json");
 	private static final String USE_MTR_FONT_KEY = "use_mtr_font";

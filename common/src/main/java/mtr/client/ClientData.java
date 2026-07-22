@@ -42,7 +42,7 @@ public final class ClientData {
 
 	private static final Map<BlockPos, Map<BlockPos, Rail>> pendingRailMerge = new HashMap<>();
 	private static long pendingRailTimestamp;
-	private static final long RAIL_MERGE_DELAY_MS = 50;
+	private static final long RAIL_MERGE_DELAY_MS = 500;
 	public static final Set<TrainClient> TRAINS = new HashSet<>();
 	public static final List<DataConverter> RAIL_ACTIONS = new ArrayList<>();
 	public static final Map<Long, Set<ScheduleEntry>> SCHEDULES_FOR_PLATFORM = new HashMap<>();
@@ -111,10 +111,6 @@ public final class ClientData {
 			if (pendingRailTimestamp > 0) {
 				for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
 					pendingRailMerge.put(entry.getKey(), entry.getValue());
-				}
-			} else {
-				for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : railsTemp.entrySet()) {
-					RAILS.put(entry.getKey(), entry.getValue());
 				}
 			}
 		});
