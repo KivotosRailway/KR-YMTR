@@ -303,6 +303,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		manualNotch = packet.readInt();
 		useLegacyManualNotch = packet.readBoolean();
 		doorTarget = packet.readBoolean();
+		isManualBrakingToReversal = packet.readBoolean();
+		reversalTargetIndex = packet.readInt();
 
 		final int ridingEntitiesCount = packet.readInt();
 		for (int i = 0; i < ridingEntitiesCount; i++) {
@@ -392,6 +394,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 		packet.writeInt(manualNotch);
 		packet.writeBoolean(useLegacyManualNotch);
 		packet.writeBoolean(doorTarget);
+		packet.writeBoolean(isManualBrakingToReversal);
+		packet.writeInt(reversalTargetIndex);
 		packet.writeInt(ridingEntities.size());
 		ridingEntities.forEach(packet::writeUUID);
 	}
@@ -555,15 +559,18 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 			final int adcTimeTicks = isCurrentlyManual ? 0 : getAdcTimeTicks();
 
 			if (!isOnRoute) {
+				isManualBrakingToReversal = false;
+				reversalTargetIndex = -1;
 				railProgress = (railLength + trainCars * spacing) / 2;
 				reversed = false;
 				tempDoorOpen = false;
 				tempDoorValue = 0;
 				speed = 0;
 				nextStoppingIndex = 0;
-
-				if (!isCurrentlyManual && canDeploy(depot) || isCurrentlyManual && manualNotch > 0) {
-					startUp(world, trainCars, spacing, isOppositeRail());
+				if (!world.isClientSide()) {
+					if (!isCurrentlyManual && canDeploy(depot) || isCurrentlyManual && manualNotch > 0) {
+						startUp(world, trainCars, spacing, isOppositeRail());
+					}
 				}
 			} else {
 				final float newAcceleration = accelerationConstant * ticksElapsed;
@@ -614,13 +621,22 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						}
 					}
 					else {
-						if (!world.isClientSide() && !isManualBrakingToReversal) {
+						if (!world.isClientSide()) {
 							final int checkIndex = getIndex(0, spacing, true) + 1;
 							if (isRailBlocked(checkIndex)) {
 								nextStoppingIndex = checkIndex - 1;
 								debugStopReport(world, "gui.mtr.debug_rail_blocked", "checkIdx=" + checkIndex);
-							} else if (nextPlatformIndex > 0 && nextPlatformIndex < path.size()) {
+							} else if (!isCurrentlyManual && nextPlatformIndex > 0 && nextPlatformIndex < path.size()) {
 								nextStoppingIndex = nextPlatformIndex;
+							}
+						}
+						int forcedStopIndex = -1;
+						if (isCurrentlyManual) {
+							for (int i = getIndex(0, spacing, false); i < path.size(); i++) {
+								if (i == path.size() - 1 || (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1)))) {
+									forcedStopIndex = i;
+									break;
+								}
 							}
 						}
 
@@ -631,20 +647,31 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							isReversalPoint = true;
 						}
 
-						final double stoppingDistance = distances.get(nextStoppingIndex) - railProgress;
+						final double effectiveStopDistance = (forcedStopIndex >= 0)
+								? distances.get(forcedStopIndex) - railProgress
+								: distances.get(nextStoppingIndex) - railProgress;
 
-						if (!transportMode.continuousMovement && (stoppingDistance < 0.5 * speed * speed / accelerationConstant || isManualBrakingToReversal)) {
-							if (!isCurrentlyManual || isReversalPoint || isManualBrakingToReversal) {
+						final boolean forceBrake = forcedStopIndex >= 0 && effectiveStopDistance < 0.5 * speed * speed / accelerationConstant;
+
+						if (!transportMode.continuousMovement && (effectiveStopDistance < 0.5 * speed * speed / accelerationConstant || isManualBrakingToReversal || forceBrake)) {
+							if (!isCurrentlyManual || forcedStopIndex >= 0 || isReversalPoint || isManualBrakingToReversal) {
 								if (!wasDecelerating && !isManualBrakingToReversal) {
 									wasDecelerating = true;
-									debugStopReport(world, "gui.mtr.debug_decel_start", "dist=" + String.format("%.1f", stoppingDistance));
+									debugStopReport(world, "gui.mtr.debug_decel_start", "dist=" + String.format("%.1f", effectiveStopDistance));
 								}
-								speed = stoppingDistance <= 0 ? Train.ACCELERATION_DEFAULT : (float) Math.max(speed - (0.5 * speed * speed / stoppingDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
+								speed = effectiveStopDistance <= 0 ? Train.ACCELERATION_DEFAULT
+										: (float) Math.max(speed - (0.5 * speed * speed / effectiveStopDistance) * ticksElapsed, Train.ACCELERATION_DEFAULT);
 								manualNotch = EB;
 
 								if (isCurrentlyManual && isReversalPoint && !isManualBrakingToReversal) {
 									isManualBrakingToReversal = true;
 									reversalTargetIndex = nextStoppingIndex;
+								} else if (forcedStopIndex >= 0 && forcedStopIndex != nextStoppingIndex) {
+									nextStoppingIndex = forcedStopIndex;
+									if (!isManualBrakingToReversal) {
+										isManualBrakingToReversal = true;
+										reversalTargetIndex = forcedStopIndex;
+									}
 								}
 							} else {
 								if (isManualBrakingToReversal) {
@@ -654,7 +681,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 								wasDecelerating = false;
 								if (manualNotch >= EB) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
-									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
+									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration,
+											0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							}
 						} else {
@@ -666,7 +694,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							if (isCurrentlyManual) {
 								if (manualNotch >= EB && !isManualBrakingToReversal) {
 									final RailType railType = convertMaxManualSpeed(maxManualSpeed);
-									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration, 0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
+									speed = Mth.clamp(speed + (useLegacyManualNotch ? manualNotch / 2.0f : getManualNotchAccelerationMultiplier(manualNotch)) * newAcceleration,
+											0, railType == null ? RailType.IRON.maxBlocksPerTick : railType.maxBlocksPerTick);
 								}
 							} else {
 								final float railSpeed;
@@ -711,7 +740,12 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 							debugStopReport(world, "gui.mtr.debug_reached_stop", "manual_reversal");
 							isManualBrakingToReversal = false;
 							reversalTargetIndex = -1;
-						} else if (!isCurrentlyManual || isReversalPointNow) {
+						} else if (isReversalPointNow || nextStoppingIndex >= path.size() - 1) {
+							railProgress = distances.get(nextStoppingIndex);
+							speed = 0;
+							manualNotch = -2;
+							debugStopReport(world, "gui.mtr.debug_reached_stop", "forced_reversal_or_end");
+						} else if (!isCurrentlyManual) {
 							railProgress = distances.get(nextStoppingIndex);
 							speed = 0;
 							manualNotch = -2;
@@ -719,7 +753,8 @@ public abstract class Train extends NameColorDataBase implements IPacket {
 						} else {
 							int newIndex = -1;
 							for (int i = nextStoppingIndex + 1; i < path.size(); i++) {
-								if (distances.get(i) > railProgress && (path.get(i).dwellTime > 0 || i == path.size() - 1 || (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1))))) {
+								if (distances.get(i) > railProgress && (path.get(i).dwellTime > 0 || i == path.size() - 1
+										|| (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1))))) {
 									newIndex = i;
 									if (i < path.size() - 1 && path.get(i).isOppositeRail(path.get(i + 1))) {
 										break;

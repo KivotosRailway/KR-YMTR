@@ -50,12 +50,12 @@ public class TrainClient extends Train implements IGui {
 
 	private final Set<Runnable> trainTranslucentRenders = new HashSet<>();
 
-	private int stoppingScoringPhase = 0;
-	private int stoppingScoringDecelStartTick;
-	private float stoppingScoringDecelStartSpeed;
-	private double stoppingScoringDeviation;
-	private double stoppingScoringPeakSpeed;
-	private int stoppingScoringMaxBrakeNotch;
+	private int scoringTargetStopIndex = -1;
+	private double scoringPeakSpeed;
+	private int scoringPeakSpeedTick;
+	private boolean scoringStopped;
+	private int scoringStopTick;
+	private int scoringBrakeNotchMin;
 
 	private static final float CONNECTION_HEIGHT = 2.25F;
 	private static final float CONNECTION_Z_OFFSET = 0.5F;
@@ -316,46 +316,39 @@ public class TrainClient extends Train implements IGui {
 		if (isManualAllowed && Train.isHoldingKey(player) && isPlayerRiding(player)) {
 			RenderDrivingOverlay.setData(manualNotch, this);
 
-			if (Config.enableStoppingScoring() && isOnRoute) {
-				final double dist = getDistanceToNextStop();
+			if (Config.enableStoppingScoring() && isOnRoute && nextStoppingIndex < path.size()) {
+				final int target = path.get(nextStoppingIndex).dwellTime > 0 ? nextStoppingIndex : -1;
+				if (target != scoringTargetStopIndex) {
+					scoringTargetStopIndex = target;
+					scoringPeakSpeed = 0;
+					scoringStopped = false;
+					scoringBrakeNotchMin = 0;
+				}
 
-				if (stoppingScoringPhase == 0) {
-					if (dist > 0 && dist < 300 && speed > ACCELERATION_DEFAULT) {
-						if (speed > stoppingScoringPeakSpeed) {
-							stoppingScoringPeakSpeed = speed;
+				if (scoringTargetStopIndex >= 0) {
+					if (speed > scoringPeakSpeed) {
+						scoringPeakSpeed = speed;
+						scoringPeakSpeedTick = player.tickCount;
+					}
+					if (manualNotch < scoringBrakeNotchMin) {
+						scoringBrakeNotchMin = manualNotch;
+					}
+					if (!scoringStopped && oldSpeed > 0 && speed <= 0) {
+						final double dist = getDistanceToNextStop();
+						if (dist != -1 && Math.abs(dist) < 10) {
+							scoringStopped = true;
+							scoringStopTick = player.tickCount;
 						}
-						if (oldSpeed > speed) {
-							stoppingScoringDecelStartTick = player.tickCount;
-							stoppingScoringDecelStartSpeed = (float) stoppingScoringPeakSpeed;
-							stoppingScoringMaxBrakeNotch = 0;
-							stoppingScoringPhase = 1;
-							stoppingScoringPeakSpeed = 0;
-						}
 					}
-				}
-
-				if (stoppingScoringPhase == 1) {
-					if (manualNotch < stoppingScoringMaxBrakeNotch) {
-						stoppingScoringMaxBrakeNotch = manualNotch;
+					if (scoringStopped && oldDoorValue == 0 && doorValue > 0) {
+						sendStoppingScore(getDistanceToNextStop());
+						scoringStopped = false;
+						scoringPeakSpeed = 0;
 					}
-					if (speed <= 0) {
-						stoppingScoringDeviation = dist;
-						stoppingScoringPhase = 2;
+					if (scoringStopped && speed > 0.5) {
+						scoringStopped = false;
+						scoringPeakSpeed = 0;
 					}
-				}
-
-				if (stoppingScoringPhase == 2 && oldDoorValue == 0 && doorValue > 0) {
-					sendStoppingScore(player.tickCount);
-					stoppingScoringPhase = 0;
-				}
-
-				if (stoppingScoringPhase == 1 && speed > 0.1) {
-					stoppingScoringPhase = 0;
-					stoppingScoringPeakSpeed = 0;
-				}
-				if (stoppingScoringPhase == 2 && speed > 0.5) {
-					stoppingScoringPhase = 0;
-					stoppingScoringPeakSpeed = 0;
 				}
 			}
 		}
@@ -481,21 +474,21 @@ public class TrainClient extends Train implements IGui {
 		return routeIds;
 	}
 
-	private void sendStoppingScore(int currentTick) {
-		final int actualTicks = currentTick - stoppingScoringDecelStartTick;
+	private void sendStoppingScore(double deviation) {
+		final int actualTicks = scoringStopTick - scoringPeakSpeedTick;
 		final float actualSeconds = actualTicks / 20.0f;
-		final float refTicks = stoppingScoringDecelStartSpeed / Math.max(accelerationConstant, 0.0001f);
+		final float refTicks = (float) scoringPeakSpeed / Math.max(accelerationConstant, 0.0001f);
 		final float refSeconds = refTicks / 20.0f;
 
-		final double absDev = Math.abs(stoppingScoringDeviation);
+		final double absDev = Math.abs(deviation);
 		final double distanceScore = Math.max(0, 60.0 * Math.exp(-absDev / 2.0));
 		final double timeScore = actualTicks <= refTicks * 1.5 ? 40.0 : Math.max(0, 40.0 * (refTicks * 1.5 / actualTicks));
 		int brakePenalty = 0;
-		if (stoppingScoringMaxBrakeNotch <= Train.EB) {
+		if (scoringBrakeNotchMin <= Train.EB) {
 			brakePenalty = 15;
-		} else if (stoppingScoringMaxBrakeNotch <= Train.B7) {
+		} else if (scoringBrakeNotchMin <= Train.B7) {
 			brakePenalty = 7;
-		} else if (stoppingScoringMaxBrakeNotch <= Train.B6) {
+		} else if (scoringBrakeNotchMin <= Train.B6) {
 			brakePenalty = 3;
 		}
 		final double totalScore = Math.max(0, distanceScore + timeScore - brakePenalty);
@@ -508,7 +501,7 @@ public class TrainClient extends Train implements IGui {
 				Component.literal(scoreColor + fmt(totalScore, 1) + "§f/100"),
 				Component.literal(devColor + fmt(absDev, 1) + "m§7(" + fmt(distanceScore, 1) + "/60)"),
 				Component.literal(timeColor + fmt(actualSeconds, 2) + "s§7(" + fmt(timeScore, 1) + "/40)"),
-				brakePenalty > 0 ? Component.literal(" §c-" + brakePenalty + " B" + (-stoppingScoringMaxBrakeNotch)) : Component.literal("")
+				brakePenalty > 0 ? Component.literal(" §c-" + brakePenalty + " B" + (-scoringBrakeNotchMin)) : Component.literal("")
 		);
 
 		final Minecraft client = Minecraft.getInstance();

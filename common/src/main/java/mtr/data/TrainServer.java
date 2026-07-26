@@ -71,6 +71,8 @@ public class TrainServer extends Train {
 
 	@Override
 	protected void startUp(Level world, int trainCars, int trainSpacing, boolean isOppositeRail) {
+		isManualBrakingToReversal = false;
+		reversalTargetIndex = -1;
 		canDeploy = false;
 		isOnRoute = true;
 		elapsedDwellTicks = 0;
