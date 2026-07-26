@@ -268,7 +268,6 @@ public class RenderPIDS<T extends BlockEntityMapper> extends BlockEntityRenderer
 					} else {
 						// Render arrival
 						final Component arrivalText;
-						// Get arrival time
 						final int seconds = (int) ((currentSchedule.arrivalMillis - System.currentTimeMillis()) / 1000);
 						if (seconds >= 60) {
 							if ((arrivalLine == 1 && renderVertical) || (arrivalLine == 0 && renderSingle) || renderClassic) {
@@ -276,9 +275,16 @@ public class RenderPIDS<T extends BlockEntityMapper> extends BlockEntityRenderer
 							} else {
 								arrivalText = Text.literal("");
 							}
-						} else {
+						} else if (seconds > 0) {
 							if ((arrivalLine == 1 && renderVertical) || (arrivalLine == 0 && renderSingle) || renderClassic) {
-								arrivalText = seconds > 0 ? Text.translatable(isCJK ? "gui.mtr.arrival_sec_cjk" : "gui.mtr.arrival_sec", seconds).append(appendDotAfterMin && !isCJK ? "." : "") : null;
+								arrivalText = Text.translatable(isCJK ? "gui.mtr.arrival_sec_cjk" : "gui.mtr.arrival_sec", seconds).append(appendDotAfterMin && !isCJK ? "." : "");
+							} else {
+								arrivalText = Text.literal("");
+							}
+						} else {
+							// 列车已到站，显示"列车到站"
+							if ((arrivalLine == 1 && renderVertical) || (arrivalLine == 0 && renderSingle) || renderClassic) {
+								arrivalText = Text.translatable("gui.mtr.arrived");
 							} else {
 								arrivalText = Text.literal("");
 							}
@@ -418,7 +424,7 @@ public class RenderPIDS<T extends BlockEntityMapper> extends BlockEntityRenderer
 						matrixStackHolder.pop();
 
 						// Render arrival time
-						if (arrivalText != null) {
+						if (!arrivalText.getString().isEmpty()) {
 							matrixStackHolder.push();
 							final int arrivalWidth = textRenderer.width(arrivalText);
 							if (renderSingle) {

@@ -620,13 +620,18 @@ public class RouteMapGenerator implements IGui {
 						if (!interchangeNames.contains(colorNameTuple.name)) interchangeNames.add(colorNameTuple.name);
 					}
 				});
-
 				if (!interchangeColors.isEmpty()) {
 					final boolean textBelow = py >= centerY;
 					final int lineHeight = lineSize * 2;
 					final int lineWidth = (int) Math.ceil((float) lineSize / interchangeColors.size());
 					final int colorBarX = px - lineWidth * interchangeColors.size() / 2;
-					final int colorBarY = py + (textBelow ? -1 - lineHeight : lineSize / 2);
+					final int colorBarY;
+					if (textBelow) {
+						colorBarY = py + lineSize / 2 + 1;
+					} else {
+						colorBarY = py - lineSize / 2 - lineHeight - 1;
+					}
+
 					for (int j = 0; j < interchangeColors.size(); j++) {
 						for (int drawX = 0; drawX < lineWidth; drawX++) {
 							for (int drawY = 0; drawY < lineHeight; drawY++) {
@@ -635,6 +640,7 @@ public class RouteMapGenerator implements IGui {
 							}
 						}
 					}
+
 					if (!interchangeNames.isEmpty()) {
 						final String interchangeNamesStr = IGui.mergeStations(interchangeNames);
 						final int[] dimensions = new int[2];
@@ -644,9 +650,14 @@ public class RouteMapGenerator implements IGui {
 								HorizontalAlignment.CENTER);
 						if (pixels != null && dimensions[0] > 0 && dimensions[1] > 0) {
 							int textX = px;
-							int textY = colorBarY + (textBelow ? -dimensions[1] / 2 - 2 : lineHeight + dimensions[1] / 2 + 2);
+							int textY;
+							if (textBelow) {
+								textY = colorBarY + lineHeight + dimensions[1] / 2 + 2;
+							} else {
+								textY = colorBarY - dimensions[1] / 2 - 2;
+							}
 							drawString(image, pixels, textX, textY, dimensions, HorizontalAlignment.CENTER,
-									textBelow ? VerticalAlignment.BOTTOM : VerticalAlignment.TOP, 0, ARGB_LIGHT_GRAY, false);
+									textBelow ? VerticalAlignment.TOP : VerticalAlignment.BOTTOM, 0, ARGB_LIGHT_GRAY, false);
 						}
 					}
 				}
@@ -663,7 +674,9 @@ public class RouteMapGenerator implements IGui {
 				if (pixels != null && textDimensions[0] > 0 && textDimensions[1] > 0) {
 					boolean textBelow = py >= centerY;
 					int textX = px;
-					int offsetY = (isCurrentStation ? lineSize + 2 : lineSize / 2 + 2) - 1;
+					int baseOffset = isCurrentStation ? lineSize + 2 : lineSize / 2 + 2;
+					int upwardShift = 4;
+					int offsetY = baseOffset - upwardShift;
 					int textY = py + (textBelow ? offsetY : -offsetY);
 					int bgColor = isCurrentStation ? ARGB_BLACK : 0;
 					int textColor = isCurrentStation ? ARGB_WHITE : ARGB_BLACK;
