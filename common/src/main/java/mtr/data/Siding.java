@@ -363,7 +363,15 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 						if (platform != null) {
 							pd.adcTime = platform.getAdcTime();
 							final Route.RoutePlatform rp = routePlatformMap.get(pd.savedRailBaseId);
-							pd.stopWithoutOpeningDoors = rp != null && rp.stopWithoutOpeningDoors;
+							if (rp != null) {
+								pd.stopWithoutOpeningDoors = rp.stopWithoutOpeningDoors;
+								if (rp.customDwellTime) {
+									pd.dwellTime = rp.dwellTime;
+								}
+								if (rp.customAdcTime) {
+									pd.adcTime = rp.adcTime;
+								}
+							}
 						}
 					}
 				}

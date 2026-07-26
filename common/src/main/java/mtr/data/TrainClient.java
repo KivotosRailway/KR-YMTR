@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
@@ -48,6 +49,13 @@ public class TrainClient extends Train implements IGui {
 	public final List<ScrollingText> scrollingTexts = new ArrayList<>();
 
 	private final Set<Runnable> trainTranslucentRenders = new HashSet<>();
+
+	private int stoppingScoringPhase = 0;
+	private int stoppingScoringDecelStartTick;
+	private float stoppingScoringDecelStartSpeed;
+	private double stoppingScoringDeviation;
+	private double stoppingScoringPeakSpeed;
+	private int stoppingScoringMaxBrakeNotch;
 
 	private static final float CONNECTION_HEIGHT = 2.25F;
 	private static final float CONNECTION_Z_OFFSET = 0.5F;
@@ -307,6 +315,49 @@ public class TrainClient extends Train implements IGui {
 		final LocalPlayer player = Minecraft.getInstance().player;
 		if (isManualAllowed && Train.isHoldingKey(player) && isPlayerRiding(player)) {
 			RenderDrivingOverlay.setData(manualNotch, this);
+
+			if (Config.enableStoppingScoring() && isOnRoute) {
+				final double dist = getDistanceToNextStop();
+
+				if (stoppingScoringPhase == 0) {
+					if (dist > 0 && dist < 300 && speed > ACCELERATION_DEFAULT) {
+						if (speed > stoppingScoringPeakSpeed) {
+							stoppingScoringPeakSpeed = speed;
+						}
+						if (oldSpeed > speed) {
+							stoppingScoringDecelStartTick = player.tickCount;
+							stoppingScoringDecelStartSpeed = (float) stoppingScoringPeakSpeed;
+							stoppingScoringMaxBrakeNotch = 0;
+							stoppingScoringPhase = 1;
+							stoppingScoringPeakSpeed = 0;
+						}
+					}
+				}
+
+				if (stoppingScoringPhase == 1) {
+					if (manualNotch < stoppingScoringMaxBrakeNotch) {
+						stoppingScoringMaxBrakeNotch = manualNotch;
+					}
+					if (speed <= 0) {
+						stoppingScoringDeviation = dist;
+						stoppingScoringPhase = 2;
+					}
+				}
+
+				if (stoppingScoringPhase == 2 && oldDoorValue == 0 && doorValue > 0) {
+					sendStoppingScore(player.tickCount);
+					stoppingScoringPhase = 0;
+				}
+
+				if (stoppingScoringPhase == 1 && speed > 0.1) {
+					stoppingScoringPhase = 0;
+					stoppingScoringPeakSpeed = 0;
+				}
+				if (stoppingScoringPhase == 2 && speed > 0.5) {
+					stoppingScoringPhase = 0;
+					stoppingScoringPeakSpeed = 0;
+				}
+			}
 		}
 	}
 
@@ -355,6 +406,15 @@ public class TrainClient extends Train implements IGui {
 	public double getDistanceToNextStop() {
 		if (!isOnRoute || distances.isEmpty() || path.isEmpty()) {
 			return -1;
+		}
+		for (int i = distances.size() - 1; i >= 0; i--) {
+			if (distances.get(i) <= railProgress && path.get(i).rail.railType == RailType.PLATFORM) {
+				final double overshoot = railProgress - distances.get(i);
+				if (overshoot <= 5.0) {
+					return -overshoot;
+				}
+				break;
+			}
 		}
 		for (int i = 0; i < distances.size(); i++) {
 			if (distances.get(i) > railProgress && path.get(i).rail.railType == RailType.PLATFORM) {
@@ -419,6 +479,51 @@ public class TrainClient extends Train implements IGui {
 
 	public final List<Long> getRouteIds() {
 		return routeIds;
+	}
+
+	private void sendStoppingScore(int currentTick) {
+		final int actualTicks = currentTick - stoppingScoringDecelStartTick;
+		final float actualSeconds = actualTicks / 20.0f;
+		final float refTicks = stoppingScoringDecelStartSpeed / Math.max(accelerationConstant, 0.0001f);
+		final float refSeconds = refTicks / 20.0f;
+
+		final double absDev = Math.abs(stoppingScoringDeviation);
+		final double distanceScore = Math.max(0, 60.0 * Math.exp(-absDev / 2.0));
+		final double timeScore = actualTicks <= refTicks * 1.5 ? 40.0 : Math.max(0, 40.0 * (refTicks * 1.5 / actualTicks));
+		int brakePenalty = 0;
+		if (stoppingScoringMaxBrakeNotch <= Train.EB) {
+			brakePenalty = 15;
+		} else if (stoppingScoringMaxBrakeNotch <= Train.B7) {
+			brakePenalty = 7;
+		} else if (stoppingScoringMaxBrakeNotch <= Train.B6) {
+			brakePenalty = 3;
+		}
+		final double totalScore = Math.max(0, distanceScore + timeScore - brakePenalty);
+
+		final String scoreColor = totalScore >= 90 ? "§a" : totalScore >= 70 ? "§e" : "§c";
+		final String devColor = absDev <= 0.5 ? "§a" : absDev <= 2.0 ? "§e" : "§c";
+		final String timeColor = actualSeconds <= refSeconds * 1.5 ? "§a" : actualSeconds <= refSeconds * 2.5 ? "§e" : "§c";
+
+		final Component message = Component.translatable("gui.mtr.stopping_score",
+				Component.literal(scoreColor + fmt(totalScore, 1) + "§f/100"),
+				Component.literal(devColor + fmt(absDev, 1) + "m§7(" + fmt(distanceScore, 1) + "/60)"),
+				Component.literal(timeColor + fmt(actualSeconds, 2) + "s§7(" + fmt(timeScore, 1) + "/40)"),
+				brakePenalty > 0 ? Component.literal(" §c-" + brakePenalty + " B" + (-stoppingScoringMaxBrakeNotch)) : Component.literal("")
+		);
+
+		final Minecraft client = Minecraft.getInstance();
+		if (client.level != null) {
+			for (final UUID uuid : ridingEntities) {
+				final net.minecraft.world.entity.player.Player passenger = client.level.getPlayerByUUID(uuid);
+				if (passenger != null) {
+					passenger.displayClientMessage(message, false);
+				}
+			}
+		}
+	}
+
+	private static String fmt(double value, int decimals) {
+		return String.format(java.util.Locale.US, "%." + decimals + "f", value);
 	}
 
 	private int getPreviousStoppingIndex(int headIndex) {

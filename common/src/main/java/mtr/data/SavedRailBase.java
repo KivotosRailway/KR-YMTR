@@ -23,7 +23,7 @@ public abstract class SavedRailBase extends NameColorDataBase {
 	public static final int MAX_DWELL_TIME = 1200;
 	public static final int MAX_ADC_TIME = 1200;
 	public static final String KEY_STOP_WITHOUT_OPENING_DOORS = "stop_without_opening_doors";
-	private static final int DEFAULT_DWELL_TIME = 20;
+	public static final int DEFAULT_DWELL_TIME = 20;
 	private static final int DEFAULT_ADC_TIME = 0;
 	private static final String KEY_POS_1 = "pos_1";
 	private static final String KEY_POS_2 = "pos_2";

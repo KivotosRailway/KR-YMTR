@@ -18,7 +18,7 @@ public class PathData extends SerializedDataBase {
 
 	public final Rail rail;
 	public final long savedRailBaseId;
-	public final int dwellTime;
+	public int dwellTime;
 	public int adcTime;
 	public boolean stopWithoutOpeningDoors;
 	public final int stopIndex;

@@ -25,6 +25,10 @@ public final class Route extends NameColorDataBase implements IGui {
 	private static final String KEY_PLATFORM_IDS = "platform_ids";
 	private static final String KEY_CUSTOM_DESTINATIONS = "custom_destinations";
 	private static final String KEY_STOP_WITHOUT_OPENING_DOORS = "stop_without_opening_doors";
+	private static final String KEY_CUSTOM_DWELL_TIMES = "custom_dwell_times";
+	private static final String KEY_PLATFORM_DWELL_TIMES = "platform_dwell_times";
+	private static final String KEY_CUSTOM_ADC_TIMES = "custom_adc_times";
+	private static final String KEY_PLATFORM_ADC_TIMES = "platform_adc_times";
 	private static final String KEY_ROUTE_TYPE = "route_type";
 	private static final String KEY_IS_LIGHT_RAIL_ROUTE = "is_light_rail_route";
 	private static final String KEY_LIGHT_RAIL_ROUTE_NUMBER = "light_rail_route_number";
@@ -62,11 +66,44 @@ public final class Route extends NameColorDataBase implements IGui {
 			messagePackHelper.iterateArrayValue(KEY_STOP_WITHOUT_OPENING_DOORS, value -> stopWithoutOpeningDoorsList.add(value.asBooleanValue().getBoolean()));
 		}
 
+		final List<Boolean> customDwellTimesList = new ArrayList<>();
+		if (map.containsKey(KEY_CUSTOM_DWELL_TIMES)) {
+			messagePackHelper.iterateArrayValue(KEY_CUSTOM_DWELL_TIMES, value -> customDwellTimesList.add(value.asBooleanValue().getBoolean()));
+		}
+
+		final List<Integer> platformDwellTimesList = new ArrayList<>();
+		if (map.containsKey(KEY_PLATFORM_DWELL_TIMES)) {
+			messagePackHelper.iterateArrayValue(KEY_PLATFORM_DWELL_TIMES, value -> platformDwellTimesList.add(value.asIntegerValue().asInt()));
+		}
+
 		for (int i = 0; i < Math.min(platformIds.size(), customDestinations.size()); i++) {
 			platformIds.get(i).customDestination = customDestinations.get(i);
 		}
 		for (int i = 0; i < Math.min(platformIds.size(), stopWithoutOpeningDoorsList.size()); i++) {
 			platformIds.get(i).stopWithoutOpeningDoors = stopWithoutOpeningDoorsList.get(i);
+		}
+		for (int i = 0; i < Math.min(platformIds.size(), customDwellTimesList.size()); i++) {
+			platformIds.get(i).customDwellTime = customDwellTimesList.get(i);
+		}
+		for (int i = 0; i < Math.min(platformIds.size(), platformDwellTimesList.size()); i++) {
+			platformIds.get(i).dwellTime = platformDwellTimesList.get(i);
+		}
+
+		final List<Boolean> customAdcTimesList = new ArrayList<>();
+		if (map.containsKey(KEY_CUSTOM_ADC_TIMES)) {
+			messagePackHelper.iterateArrayValue(KEY_CUSTOM_ADC_TIMES, value -> customAdcTimesList.add(value.asBooleanValue().getBoolean()));
+		}
+
+		final List<Integer> platformAdcTimesList = new ArrayList<>();
+		if (map.containsKey(KEY_PLATFORM_ADC_TIMES)) {
+			messagePackHelper.iterateArrayValue(KEY_PLATFORM_ADC_TIMES, value -> platformAdcTimesList.add(value.asIntegerValue().asInt()));
+		}
+
+		for (int i = 0; i < Math.min(platformIds.size(), customAdcTimesList.size()); i++) {
+			platformIds.get(i).customAdcTime = customAdcTimesList.get(i);
+		}
+		for (int i = 0; i < Math.min(platformIds.size(), platformAdcTimesList.size()); i++) {
+			platformIds.get(i).adcTime = platformAdcTimesList.get(i);
 		}
 
 		routeType = EnumHelper.valueOf(RouteType.NORMAL, messagePackHelper.getString(KEY_ROUTE_TYPE));
@@ -104,6 +141,10 @@ public final class Route extends NameColorDataBase implements IGui {
 			final RoutePlatform routePlatform = new RoutePlatform(packet.readLong());
 			routePlatform.customDestination = packet.readUtf(PACKET_STRING_READ_LENGTH);
 			routePlatform.stopWithoutOpeningDoors = packet.readBoolean();
+			routePlatform.customDwellTime = packet.readBoolean();
+			routePlatform.dwellTime = packet.readInt();
+			routePlatform.customAdcTime = packet.readBoolean();
+			routePlatform.adcTime = packet.readInt();
 			platformIds.add(routePlatform);
 		}
 
@@ -134,6 +175,26 @@ public final class Route extends NameColorDataBase implements IGui {
 			messagePacker.packBoolean(routePlatform.stopWithoutOpeningDoors);
 		}
 
+		messagePacker.packString(KEY_CUSTOM_DWELL_TIMES).packArrayHeader(platformIds.size());
+		for (final RoutePlatform routePlatform : platformIds) {
+			messagePacker.packBoolean(routePlatform.customDwellTime);
+		}
+
+		messagePacker.packString(KEY_PLATFORM_DWELL_TIMES).packArrayHeader(platformIds.size());
+		for (final RoutePlatform routePlatform : platformIds) {
+			messagePacker.packInt(routePlatform.dwellTime);
+		}
+
+		messagePacker.packString(KEY_CUSTOM_ADC_TIMES).packArrayHeader(platformIds.size());
+		for (final RoutePlatform routePlatform : platformIds) {
+			messagePacker.packBoolean(routePlatform.customAdcTime);
+		}
+
+		messagePacker.packString(KEY_PLATFORM_ADC_TIMES).packArrayHeader(platformIds.size());
+		for (final RoutePlatform routePlatform : platformIds) {
+			messagePacker.packInt(routePlatform.adcTime);
+		}
+
 		messagePacker.packString(KEY_ROUTE_TYPE).packString(routeType.toString());
 		messagePacker.packString(KEY_IS_LIGHT_RAIL_ROUTE).packBoolean(isLightRailRoute);
 		messagePacker.packString(KEY_IS_ROUTE_HIDDEN).packBoolean(isHidden);
@@ -144,7 +205,7 @@ public final class Route extends NameColorDataBase implements IGui {
 
 	@Override
 	public int messagePackLength() {
-		return super.messagePackLength() + 9;
+		return super.messagePackLength() + 13;
 	}
 
 	@Override
@@ -155,6 +216,10 @@ public final class Route extends NameColorDataBase implements IGui {
 			packet.writeLong(routePlatform.platformId);
 			packet.writeUtf(routePlatform.customDestination);
 			packet.writeBoolean(routePlatform.stopWithoutOpeningDoors);
+			packet.writeBoolean(routePlatform.customDwellTime);
+			packet.writeInt(routePlatform.dwellTime);
+			packet.writeBoolean(routePlatform.customAdcTime);
+			packet.writeInt(routePlatform.adcTime);
 		});
 
 		packet.writeUtf(routeType.toString());
@@ -175,6 +240,10 @@ public final class Route extends NameColorDataBase implements IGui {
 					final RoutePlatform routePlatform = new RoutePlatform(packet.readLong());
 					routePlatform.customDestination = packet.readUtf(PACKET_STRING_READ_LENGTH);
 					routePlatform.stopWithoutOpeningDoors = packet.readBoolean();
+					routePlatform.customDwellTime = packet.readBoolean();
+					routePlatform.dwellTime = packet.readInt();
+					routePlatform.customAdcTime = packet.readBoolean();
+					routePlatform.adcTime = packet.readInt();
 					platformIds.add(routePlatform);
 				}
 				break;
@@ -209,6 +278,10 @@ public final class Route extends NameColorDataBase implements IGui {
 			packet.writeLong(routePlatform.platformId);
 			packet.writeUtf(routePlatform.customDestination);
 			packet.writeBoolean(routePlatform.stopWithoutOpeningDoors);
+			packet.writeBoolean(routePlatform.customDwellTime);
+			packet.writeInt(routePlatform.dwellTime);
+			packet.writeBoolean(routePlatform.customAdcTime);
+			packet.writeInt(routePlatform.adcTime);
 		});
 		sendPacket.accept(packet);
 	}
@@ -275,12 +348,20 @@ public final class Route extends NameColorDataBase implements IGui {
 
 		public String customDestination;
 		public boolean stopWithoutOpeningDoors;
+		public boolean customDwellTime;
+		public int dwellTime;
+		public boolean customAdcTime;
+		public int adcTime;
 		public final long platformId;
 
 		public RoutePlatform(long platformId) {
 			this.platformId = platformId;
 			customDestination = "";
 			stopWithoutOpeningDoors = false;
+			customDwellTime = false;
+			dwellTime = SavedRailBase.DEFAULT_DWELL_TIME;
+			customAdcTime = false;
+			adcTime = 0;
 		}
 	}
 

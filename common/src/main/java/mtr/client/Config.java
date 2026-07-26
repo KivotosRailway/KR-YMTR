@@ -26,6 +26,7 @@ public class Config {
 	private static int trackTextureOffset;
 	private static int dynamicTextureResolution = 2;
 	private static int trainRenderDistance = 7;
+	private static boolean enableStoppingScoring;
 	private static final int DEFAULT_TRAIN_RENDER_DISTANCE = 7;
 
 	public static final List<Patreon> PATREON_LIST = new ArrayList<>();
@@ -50,6 +51,7 @@ public class Config {
 	private static final String DYNAMIC_TEXTURE_RESOLUTION = "dynamic texture resolution";
 	private static final String TRAIN_RENDER_DISTANCE = "train_render_distance";
 	private static final String RAIL_RENDER_DISTANCE = "rail_render_distance";
+	private static final String ENABLE_STOPPING_SCORING = "enable_stopping_scoring";
 
 	public static boolean useMTRFont() {
 		return useMTRFont;
@@ -69,6 +71,10 @@ public class Config {
 
 	public static boolean shiftToToggleSitting() {
 		return shiftToToggleSitting;
+	}
+
+	public static boolean enableStoppingScoring() {
+		return enableStoppingScoring;
 	}
 
 	public static int languageOptions() {
@@ -141,6 +147,12 @@ public class Config {
 		shiftToToggleSitting = value;
 		writeToFile();
 		return shiftToToggleSitting;
+	}
+
+	public static boolean setEnableStoppingScoring(boolean value) {
+		enableStoppingScoring = value;
+		writeToFile();
+		return enableStoppingScoring;
 	}
 
 	public static int setLanguageOptions(int value) {
@@ -223,6 +235,10 @@ public class Config {
 				railRenderDistance = Mth.clamp(jsonConfig.get(RAIL_RENDER_DISTANCE).getAsInt(), 0, RAIL_RENDER_DISTANCE_COUNT - 1);
 			} catch (Exception ignored) {
 			}
+			try {
+				enableStoppingScoring = jsonConfig.get(ENABLE_STOPPING_SCORING).getAsBoolean();
+			} catch (Exception ignored) {
+			}
 		} catch (Exception e) {
 			writeToFile();
 			e.printStackTrace();
@@ -243,6 +259,7 @@ public class Config {
 		jsonConfig.addProperty(DYNAMIC_TEXTURE_RESOLUTION, dynamicTextureResolution);
 		jsonConfig.addProperty(TRAIN_RENDER_DISTANCE, trainRenderDistance);
 		jsonConfig.addProperty(RAIL_RENDER_DISTANCE, railRenderDistance);
+		jsonConfig.addProperty(ENABLE_STOPPING_SCORING, enableStoppingScoring);
 
 		try {
 			Files.write(CONFIG_FILE_PATH, Collections.singleton(RailwayData.prettyPrint(jsonConfig)));

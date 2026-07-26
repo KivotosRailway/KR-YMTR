@@ -52,9 +52,21 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 	private final LocalPlayer player;
 	private final Font textRenderer;
 
+	private boolean isAnimating;
+	private double animFromScale, animToScale;
+	private long animStartMillis;
+	private double anchorScreenX, anchorScreenY;
+	private double anchorWorldX, anchorWorldY;
+
 	private static final int ARGB_BLUE = 0xFF4285F4;
 	private static final int SCALE_UPPER_LIMIT = 64;
 	private static final double SCALE_LOWER_LIMIT = 1 / 128D;
+	private static final int ZOOM_ANIMATION_DURATION = 250;
+
+	private static final double OUTLINE_BASE_WORLD_WIDTH = 0.9;
+	private static final double OUTLINE_MIN_SCREEN_WIDTH = 0.6;
+	private static final double OUTLINE_MAX_SCREEN_WIDTH = 2.5;
+	private static final double OUTLINE_MAX_AREA_RATIO = 0.4;
 
 	public WidgetMap(TransportMode transportMode, OnDrawCorners onDrawCorners, Runnable onDrawCornersMouseRelease, Consumer<Long> onClickAddPlatformToRoute, Consumer<SavedRailBase> onClickEditSavedRail, BiFunction<Double, Double, Boolean> isRestrictedMouseArea) {
 		this.transportMode = transportMode;
@@ -76,11 +88,27 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 			centerY = player.getZ();
 		}
 		scale = 1;
+		isAnimating = false;
 		setShowStations(true);
 	}
 
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+		if (isAnimating) {
+			final long elapsed = System.currentTimeMillis() - animStartMillis;
+			final double progress = Mth.clamp((double) elapsed / ZOOM_ANIMATION_DURATION, 0.0, 1.0);
+			final double easedProgress = 1.0 - Math.pow(1.0 - progress, 3);
+			scale = animFromScale + (animToScale - animFromScale) * easedProgress;
+			centerX = anchorWorldX - (anchorScreenX - width / 2.0) / scale;
+			centerY = anchorWorldY - (anchorScreenY - height / 2.0) / scale;
+			if (progress >= 1.0) {
+				scale = animToScale;
+				isAnimating = false;
+				centerX = anchorWorldX - (anchorScreenX - width / 2.0) / scale;
+				centerY = anchorWorldY - (anchorScreenY - height / 2.0) / scale;
+			}
+		}
+
 		final Tesselator tesselator = Tesselator.getInstance();
 		final BufferBuilder buffer = tesselator.getBuilder();
 		UtilitiesClient.beginDrawingRectangle(buffer);
@@ -105,7 +133,8 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 				ClientData.DATA_CACHE.getPosToPlatforms(transportMode).forEach((platformPos, platforms) -> drawRectangleFromWorldCoords(buffer, platformPos.getX(), platformPos.getZ(), platformPos.getX() + 1, platformPos.getZ() + 1, ARGB_WHITE));
 				for (final Station station : ClientData.STATIONS) {
 					if (AreaBase.nonNullCorners(station)) {
-						drawRectangleFromWorldCoords(buffer, station.corner1, station.corner2, ARGB_BLACK_TRANSLUCENT + station.color);
+						drawRectangleFromWorldCoords(buffer, station.corner1, station.corner2, ARGB_BLACK_MORE_TRANSLUCENT);
+						drawOutlineFromWorldCoords(buffer, station.corner1, station.corner2, 0xFF000000 | station.color);
 					}
 				}
 				mouseOnSavedRail(mouseWorldPos, (savedRail, x1, z1, x2, z2) -> drawRectangleFromWorldCoords(buffer, x1, z1, x2, z2, ARGB_WHITE), true);
@@ -113,7 +142,8 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 				ClientData.DATA_CACHE.getPosToSidings(transportMode).forEach((sidingPos, sidings) -> drawRectangleFromWorldCoords(buffer, sidingPos.getX(), sidingPos.getZ(), sidingPos.getX() + 1, sidingPos.getZ() + 1, ARGB_WHITE));
 				for (final Depot depot : ClientData.DEPOTS) {
 					if (depot.isTransportMode(transportMode) && AreaBase.nonNullCorners(depot)) {
-						drawRectangleFromWorldCoords(buffer, depot.corner1, depot.corner2, ARGB_BLACK_TRANSLUCENT + depot.color);
+						drawRectangleFromWorldCoords(buffer, depot.corner1, depot.corner2, ARGB_BLACK_MORE_TRANSLUCENT);
+						drawOutlineFromWorldCoords(buffer, depot.corner1, depot.corner2, 0xFF000000 | depot.color);
 					}
 				}
 				mouseOnSavedRail(mouseWorldPos, (savedRail, x1, z1, x2, z2) -> drawRectangleFromWorldCoords(buffer, x1, z1, x2, z2, ARGB_WHITE), false);
@@ -193,6 +223,7 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 		} else {
 			centerX -= deltaX / scale;
 			centerY -= deltaY / scale;
+			isAnimating = false;
 		}
 		return true;
 	}
@@ -228,15 +259,17 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-		final double oldScale = scale;
-		if (oldScale > SCALE_LOWER_LIMIT && amount < 0) {
-			centerX -= (mouseX - x - width / 2D) / scale;
-			centerY -= (mouseY - y - height / 2D) / scale;
-		}
-		scale(amount);
-		if (oldScale < SCALE_UPPER_LIMIT && amount > 0) {
-			centerX += (mouseX - x - width / 2D) / scale;
-			centerY += (mouseY - y - height / 2D) / scale;
+		final double newTargetScale = Mth.clamp(scale * Math.pow(2, amount), SCALE_LOWER_LIMIT, SCALE_UPPER_LIMIT);
+		if (Math.abs(newTargetScale - scale) > 1e-6) {
+			anchorScreenX = mouseX - x;
+			anchorScreenY = mouseY - y;
+			final Tuple<Double, Double> worldPos = coordsToWorldPos(anchorScreenX, anchorScreenY);
+			anchorWorldX = worldPos.getA();
+			anchorWorldY = worldPos.getB();
+			animFromScale = scale;
+			animToScale = newTargetScale;
+			animStartMillis = System.currentTimeMillis();
+			isAnimating = true;
 		}
 		return true;
 	}
@@ -258,23 +291,27 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 		this.y = y;
 		this.width = width;
 		this.height = height;
+		isAnimating = false;
 	}
 
 	public void scale(double amount) {
 		scale *= Math.pow(2, amount);
 		scale = Mth.clamp(scale, SCALE_LOWER_LIMIT, SCALE_UPPER_LIMIT);
+		isAnimating = false;
 	}
 
 	public void find(double x1, double z1, double x2, double z2) {
 		centerX = (x1 + x2) / 2;
 		centerY = (z1 + z2) / 2;
 		scale = Math.max(2, scale);
+		isAnimating = false;
 	}
 
 	public void find(BlockPos pos) {
 		centerX = pos.getX();
 		centerY = pos.getZ();
 		scale = Math.max(8, scale);
+		isAnimating = false;
 	}
 
 	public void startEditingArea(AreaBase editingArea) {
@@ -336,6 +373,26 @@ public class WidgetMap implements WidgetMapper, SelectableMapper, GuiEventListen
 
 	private void drawRectangleFromWorldCoords(BufferBuilder buffer, Tuple<Integer, Integer> corner1, Tuple<Integer, Integer> corner2, int color) {
 		drawRectangleFromWorldCoords(buffer, corner1.getA(), corner1.getB(), corner2.getA(), corner2.getB(), color);
+	}
+
+	private void drawOutlineFromWorldCoords(BufferBuilder buffer, Tuple<Integer, Integer> corner1, Tuple<Integer, Integer> corner2, int color) {
+		final double minX = Math.min(corner1.getA(), corner2.getA());
+		final double maxX = Math.max(corner1.getA(), corner2.getA());
+		final double minZ = Math.min(corner1.getB(), corner2.getB());
+		final double maxZ = Math.max(corner1.getB(), corner2.getB());
+
+		double screenWidth = Mth.clamp(OUTLINE_BASE_WORLD_WIDTH * scale, OUTLINE_MIN_SCREEN_WIDTH, OUTLINE_MAX_SCREEN_WIDTH);
+		double outlineWidth = screenWidth / scale;
+
+		final double maxWorldWidth = Math.min(maxX - minX, maxZ - minZ) * OUTLINE_MAX_AREA_RATIO;
+		if (outlineWidth > maxWorldWidth) {
+			outlineWidth = maxWorldWidth;
+		}
+
+		drawRectangleFromWorldCoords(buffer, minX, minZ, maxX, minZ + outlineWidth, color); // 上
+		drawRectangleFromWorldCoords(buffer, minX, maxZ - outlineWidth, maxX, maxZ, color); // 下
+		drawRectangleFromWorldCoords(buffer, minX, minZ, minX + outlineWidth, maxZ, color); // 左
+		drawRectangleFromWorldCoords(buffer, maxX - outlineWidth, minZ, maxX, maxZ, color); // 右
 	}
 
 	private void drawRectangleFromWorldCoords(BufferBuilder buffer, double posX1, double posZ1, double posX2, double posZ2, int color) {

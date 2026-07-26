@@ -7,14 +7,11 @@
 		"PlayerTeleportationStateAccessor"
 	],
 	"client": [
-		"EntitySetOldPosAndRotMixin",
 		"GameRendererMixin",
 		"LevelRendererMixin",
 		"PlayerRendererOffsetMixin"
 	],
-	"server": [
-		"SHMetroMixin"
-	],
+	"server": [],
 	"injectors": {
 		"defaultRequire": 1
 	}

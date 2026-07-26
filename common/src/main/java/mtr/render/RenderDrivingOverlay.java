@@ -64,23 +64,34 @@ public class RenderDrivingOverlay implements IGui {
 
 	private static void renderPlatformBar(GuiGraphics guiGraphics, Minecraft client, int screenWidth, int screenHeight) {
 		final double distanceToStop = trainClient.getDistanceToNextStop();
-		if (distanceToStop < 0) return;
+		if (distanceToStop == -1 || distanceToStop < -5) return;
 
 		final int barX = EDGE_PADDING;
 		final int barY = screenHeight / 2 - PLATFORM_BAR_HEIGHT / 2;
+		final int zeroLineOffset = 12;
 
 		guiGraphics.fill(barX, barY, barX + PLATFORM_BAR_WIDTH, barY + PLATFORM_BAR_HEIGHT, 0x80000000);
 
-		final double maxDisplayDistance = 500.0;
-		final double clampedDistance = Mth.clamp(distanceToStop, 0, maxDisplayDistance);
-		final int indicatorY = barY + (int) ((clampedDistance / maxDisplayDistance) * PLATFORM_BAR_HEIGHT);
+		final int zeroLineY = barY + zeroLineOffset;
+		guiGraphics.fill(barX, zeroLineY, barX + PLATFORM_BAR_WIDTH, zeroLineY + 1, 0x40FFFFFF);
 
-		guiGraphics.fill(barX - 1, indicatorY, barX + PLATFORM_BAR_WIDTH + 1, indicatorY + 1, RED_COLOR);
+		final double maxDisplayDistance = 500.0;
+		final double clampedDistance = Mth.clamp(distanceToStop, -5.0, maxDisplayDistance);
+
+		final int indicatorY;
+		if (clampedDistance >= 0) {
+			indicatorY = barY + zeroLineOffset + (int) ((clampedDistance / maxDisplayDistance) * (PLATFORM_BAR_HEIGHT - zeroLineOffset));
+		} else {
+			indicatorY = barY + zeroLineOffset + (int) ((clampedDistance / 5.0) * zeroLineOffset);
+		}
+
+		final int visibleIndicatorY = Mth.clamp(indicatorY, barY, barY + PLATFORM_BAR_HEIGHT);
+
+		guiGraphics.fill(barX - 1, visibleIndicatorY, barX + PLATFORM_BAR_WIDTH + 1, visibleIndicatorY + 1, RED_COLOR);
 
 		final String distanceText = RailwayData.round(distanceToStop, 1) + " m";
-		final int textWidth = client.font.width(distanceText);
 		final int textX = barX + PLATFORM_BAR_WIDTH + TEXT_PADDING;
-		final int textY = indicatorY - client.font.lineHeight / 2;
+		final int textY = visibleIndicatorY - client.font.lineHeight / 2;
 		guiGraphics.drawString(client.font, distanceText, textX, textY, ARGB_WHITE, true);
 	}
 

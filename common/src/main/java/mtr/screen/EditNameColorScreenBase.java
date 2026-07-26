@@ -18,11 +18,11 @@ public abstract class EditNameColorScreenBase<T extends NameColorDataBase> exten
 
 	protected final T data;
 	private final DashboardScreen dashboardScreen;
-	private final Component nameText;
-	private final Component colorText;
+	protected final Component nameText;
+	protected final Component colorText;
 
-	private final WidgetBetterTextField textFieldName;
-	private final WidgetColorSelector colorSelector;
+	protected final WidgetBetterTextField textFieldName;
+	protected final WidgetColorSelector colorSelector;
 
 	public EditNameColorScreenBase(T data, DashboardScreen dashboardScreen, String nameKey, String colorKey) {
 		super(Text.literal(""));

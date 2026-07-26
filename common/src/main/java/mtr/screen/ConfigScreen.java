@@ -23,6 +23,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 	private boolean hideSpecialRailColors;
 	private boolean hideTranslucentParts;
 	private boolean shiftToToggleSitting;
+	private boolean enableStoppingScoring;
 	private int languageOptions;
 	private boolean useDynamicFPS;
 
@@ -36,6 +37,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 	private final Button buttonHideSpecialRailColors;
 	private final Button buttonHideTranslucentParts;
 	private final Button buttonShiftToToggleSitting;
+	private final Button buttonEnableStoppingScoring;
 	private final Button buttonLanguageOptions;
 	private final Button buttonUseDynamicFPS;
 	private final WidgetShorterSlider sliderTrackTextureOffset;
@@ -87,6 +89,10 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 			shiftToToggleSitting = Config.setShiftToToggleSitting(!shiftToToggleSitting);
 			setButtonText(button, shiftToToggleSitting);
 		});
+		buttonEnableStoppingScoring = UtilitiesClient.newButton(BUTTON_HEIGHT, Text.literal(""), button -> {
+			enableStoppingScoring = Config.setEnableStoppingScoring(!enableStoppingScoring);
+			setButtonText(button, enableStoppingScoring);
+		});
 		buttonLanguageOptions = UtilitiesClient.newButton(BUTTON_HEIGHT, Text.literal(""), button -> {
 			languageOptions = Config.setLanguageOptions(languageOptions + 1);
 			button.setMessage(Text.translatable("options.mtr.language_options_" + languageOptions));
@@ -112,6 +118,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 		hideSpecialRailColors = Config.hideSpecialRailColors();
 		hideTranslucentParts = Config.hideTranslucentParts();
 		shiftToToggleSitting = Config.shiftToToggleSitting();
+		enableStoppingScoring = Config.enableStoppingScoring();
 		languageOptions = Config.languageOptions();
 		useDynamicFPS = Config.useDynamicFPS();
 
@@ -132,6 +139,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 			IDrawing.setPositionAndWidth(buttonHideSpecialRailColors, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH);
 			IDrawing.setPositionAndWidth(buttonHideTranslucentParts, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH);
 			IDrawing.setPositionAndWidth(buttonShiftToToggleSitting, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH);
+			IDrawing.setPositionAndWidth(buttonEnableStoppingScoring, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH);
 			IDrawing.setPositionAndWidth(buttonLanguageOptions, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH);
 			IDrawing.setPositionAndWidth(buttonUseDynamicFPS, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH);
 			IDrawing.setPositionAndWidth(sliderTrackTextureOffset, width - SQUARE_SIZE - BUTTON_WIDTH, BUTTON_HEIGHT * (i++) + SQUARE_SIZE + offsetY, BUTTON_WIDTH - TEXT_PADDING - font.width("100%"));
@@ -146,6 +154,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 		setButtonText(buttonHideSpecialRailColors, hideSpecialRailColors);
 		setButtonText(buttonHideTranslucentParts, hideTranslucentParts);
 		setButtonText(buttonShiftToToggleSitting, shiftToToggleSitting);
+		setButtonText(buttonEnableStoppingScoring, enableStoppingScoring);
 		buttonLanguageOptions.setMessage(Text.translatable("options.mtr.language_options_" + languageOptions));
 		setButtonText(buttonUseDynamicFPS, useDynamicFPS);
 		sliderTrackTextureOffset.setHeight(BUTTON_HEIGHT);
@@ -168,6 +177,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 			addDrawableChild(buttonHideSpecialRailColors);
 			addDrawableChild(buttonHideTranslucentParts);
 			addDrawableChild(buttonShiftToToggleSitting);
+			addDrawableChild(buttonEnableStoppingScoring);
 			addDrawableChild(buttonLanguageOptions);
 			addDrawableChild(buttonUseDynamicFPS);
 			addDrawableChild(sliderTrackTextureOffset);
@@ -193,6 +203,7 @@ public class ConfigScreen extends ScreenMapper implements IGui {
 				guiGraphics.drawString(font, Text.translatable("options.mtr.hide_special_rail_colors"), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
 				guiGraphics.drawString(font, Text.translatable("options.mtr.hide_translucent_parts"), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
 				guiGraphics.drawString(font, Text.translatable("options.mtr.shift_to_toggle_sitting", minecraft == null ? "" : minecraft.options.keyShift.getTranslatedKeyMessage()), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
+				guiGraphics.drawString(font, Text.translatable("options.mtr.enable_stopping_scoring"), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
 				guiGraphics.drawString(font, Text.translatable("options.mtr.language_options"), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
 				guiGraphics.drawString(font, Text.translatable("options.mtr.use_dynamic_fps"), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
 				guiGraphics.drawString(font, Text.translatable("options.mtr.track_texture_offset"), SQUARE_SIZE, BUTTON_HEIGHT * (i++) + yStart1, ARGB_WHITE);
