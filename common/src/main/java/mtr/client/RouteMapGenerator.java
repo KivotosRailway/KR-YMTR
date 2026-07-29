@@ -600,66 +600,72 @@ public class RouteMapGenerator implements IGui {
 
 			boolean isCurrentStation = (delta == 0);
 
-			drawStation(image, px, py, 1, 0, false);
-			if (isCurrentStation) {
-				drawStationDot(image, px, py, Math.max(2, lineSize / 2 - 1), ARGB_WHITE, ARGB_WHITE);
-			}
-
 			final long platformId = platforms.get(i).platformId;
 			final long stationId = getStationId(platformId);
 			final Station station = clientCache.stationIdMap.get(stationId);
 			final String stationName = (station == null) ? "" : station.name;
 
 			final Map<Integer, ClientCache.ColorNameTuple> interchangeRoutes = getInterchangeRoutes(stationId);
-			if (interchangeRoutes != null && !interchangeRoutes.isEmpty()) {
-				final List<Integer> interchangeColors = new ArrayList<>();
-				final List<String> interchangeNames = new ArrayList<>();
+			final List<Integer> interchangeColors = new ArrayList<>();
+			final List<String> interchangeNames = new ArrayList<>();
+			if (interchangeRoutes != null) {
 				interchangeRoutes.forEach((colorKey, colorNameTuple) -> {
 					if (!currentRouteColors.contains(colorKey) && !currentRouteNames.contains(colorNameTuple.name)) {
 						if (!interchangeColors.contains(colorKey)) interchangeColors.add(colorKey);
 						if (!interchangeNames.contains(colorNameTuple.name)) interchangeNames.add(colorNameTuple.name);
 					}
 				});
-				if (!interchangeColors.isEmpty()) {
-					final boolean textBelow = py >= centerY;
-					final int lineHeight = lineSize * 2;
-					final int lineWidth = (int) Math.ceil((float) lineSize / interchangeColors.size());
-					final int colorBarX = px - lineWidth * interchangeColors.size() / 2;
-					final int colorBarY;
-					if (textBelow) {
-						colorBarY = py + lineSize / 2 + 1;
+			}
+
+			boolean putBarBelow = false;
+			int lineHeight = 0;
+			int lineWidth = 0;
+			int colorBarX = 0;
+			int colorBarY = 0;
+			boolean hasInterchange = !interchangeColors.isEmpty();
+
+			if (hasInterchange) {
+				putBarBelow = py < centerY;
+				lineHeight = lineSize * 2;
+				lineWidth = (int) Math.ceil((float) lineSize / interchangeColors.size());
+				colorBarX = px - lineWidth * interchangeColors.size() / 2;
+				colorBarY = putBarBelow ? py + lineSize / 2 + 1 : py - lineSize / 2 - lineHeight - 1;
+
+				for (int j = 0; j < interchangeColors.size(); j++) {
+					for (int drawX = 0; drawX < lineWidth; drawX++) {
+						for (int drawY = 0; drawY < lineHeight; drawY++) {
+							drawPixelSafe(image, colorBarX + drawX + lineWidth * j, colorBarY + drawY,
+									ARGB_BLACK | interchangeColors.get(j));
+						}
+					}
+				}
+			}
+
+			drawStation(image, px, py, 1, 0, false);
+			if (isCurrentStation) {
+				drawStationDot(image, px, py, Math.max(2, lineSize / 2 - 1), ARGB_WHITE, ARGB_WHITE);
+			}
+
+			if (hasInterchange && !interchangeNames.isEmpty()) {
+				final String interchangeNamesStr = IGui.mergeStations(interchangeNames);
+				final int[] dimensions = new int[2];
+				final byte[] pixels = clientCache.getTextPixels(interchangeNamesStr, dimensions,
+						maxTextWidth - lineHeight, (int) ((fontSizeSmall * 3 / 2) * ClientCache.LINE_HEIGHT_MULTIPLIER),
+						fontSizeSmall * 3 / 4, fontSizeSmall * 3 / 4, 0,
+						HorizontalAlignment.CENTER);
+				if (pixels != null && dimensions[0] > 0 && dimensions[1] > 0) {
+					int textX = px;
+					int textY;
+					VerticalAlignment verticalAlignment;
+					if (putBarBelow) {
+						textY = colorBarY + lineHeight + dimensions[1] / 2 + 2;
+						verticalAlignment = VerticalAlignment.TOP;
 					} else {
-						colorBarY = py - lineSize / 2 - lineHeight - 1;
+						textY = colorBarY - dimensions[1] / 2 - 2;
+						verticalAlignment = VerticalAlignment.BOTTOM;
 					}
-
-					for (int j = 0; j < interchangeColors.size(); j++) {
-						for (int drawX = 0; drawX < lineWidth; drawX++) {
-							for (int drawY = 0; drawY < lineHeight; drawY++) {
-								drawPixelSafe(image, colorBarX + drawX + lineWidth * j, colorBarY + drawY,
-										ARGB_BLACK | interchangeColors.get(j));
-							}
-						}
-					}
-
-					if (!interchangeNames.isEmpty()) {
-						final String interchangeNamesStr = IGui.mergeStations(interchangeNames);
-						final int[] dimensions = new int[2];
-						final byte[] pixels = clientCache.getTextPixels(interchangeNamesStr, dimensions,
-								maxTextWidth - lineHeight, (int) ((fontSizeSmall * 3 / 2) * ClientCache.LINE_HEIGHT_MULTIPLIER),
-								fontSizeSmall * 3 / 4, fontSizeSmall * 3 / 4, 0,
-								HorizontalAlignment.CENTER);
-						if (pixels != null && dimensions[0] > 0 && dimensions[1] > 0) {
-							int textX = px;
-							int textY;
-							if (textBelow) {
-								textY = colorBarY + lineHeight + dimensions[1] / 2 + 2;
-							} else {
-								textY = colorBarY - dimensions[1] / 2 - 2;
-							}
-							drawString(image, pixels, textX, textY, dimensions, HorizontalAlignment.CENTER,
-									textBelow ? VerticalAlignment.TOP : VerticalAlignment.BOTTOM, 0, ARGB_LIGHT_GRAY, false);
-						}
-					}
+					drawString(image, pixels, textX, textY, dimensions, HorizontalAlignment.CENTER,
+							verticalAlignment, 0, ARGB_LIGHT_GRAY, false);
 				}
 			}
 

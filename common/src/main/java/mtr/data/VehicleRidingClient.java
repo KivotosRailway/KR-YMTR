@@ -31,6 +31,11 @@ public class VehicleRidingClient {
 	private float lastSentTicks;
 	private int interval;
 	private int previousInterval;
+	private double prevMoveX;
+	private double prevMoveY;
+	private double prevMoveZ;
+	private float prevPlayerYRot;
+	private boolean hasPrevPosition;
 	private final List<Double> offset = new ArrayList<>();
 	private final Map<UUID, Float> percentagesX = new HashMap<>();
 	private final Map<UUID, Float> percentagesZ = new HashMap<>();
@@ -144,7 +149,16 @@ public class VehicleRidingClient {
 				clientPlayer.setDeltaMovement(0, 0, 0);
 				clientPlayer.setSpeed(0);
 				if (MTRClient.getGameTick() > 40) {
-					clientPlayer.absMoveTo(moveX, moveY, moveZ);
+					clientPlayer.setPos(moveX, moveY, moveZ);
+					if (hasPrevPosition) {
+						clientPlayer.xo = prevMoveX;
+						clientPlayer.yo = prevMoveY;
+						clientPlayer.zo = prevMoveZ;
+					}
+					prevMoveX = moveX;
+					prevMoveY = moveY;
+					prevMoveZ = moveZ;
+					hasPrevPosition = true;
 				}
 			}
 
@@ -152,6 +166,7 @@ public class VehicleRidingClient {
 
 			if (shouldSetOffset) {
 				if (shouldSetYaw) {
+					final float playerYawBefore = Utilities.getYaw(clientPlayer);
 					float angleDifference = (float) Math.toDegrees(clientPrevYaw - yaw);
 					if (angleDifference > 180) {
 						angleDifference -= 360;
@@ -159,6 +174,7 @@ public class VehicleRidingClient {
 						angleDifference += 360;
 					}
 					Utilities.incrementYaw(clientPlayer, angleDifference);
+					clientPlayer.yRotO = playerYawBefore;
 				}
 				offset.add(x);
 				offset.add(y);

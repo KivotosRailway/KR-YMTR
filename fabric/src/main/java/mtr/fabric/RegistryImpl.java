@@ -3,15 +3,11 @@ package mtr.fabric;
 import mtr.mappings.FabricRegistryUtilities;
 import mtr.mappings.NetworkUtilities;
 import mtr.mixin.PlayerTeleportationStateAccessor;
-import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
@@ -24,43 +20,20 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class RegistryImpl {
-
-	private static final Map<ResourceLocation, List<Item>> creativeTabItems = new HashMap<>();
-	private static boolean creativeTabListenerRegistered;
 
 	public static boolean isFabric() {
 		return true;
 	}
 
 	public static Supplier<CreativeModeTab> getCreativeModeTab(ResourceLocation id, Supplier<ItemStack> supplier) {
-		if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
-			return () -> FabricRegistryUtilities.createCreativeModeTab(id, supplier);
-		}
-		return () -> null;
+		return () -> FabricRegistryUtilities.createCreativeModeTab(id, supplier);
 	}
 
 	public static void registerCreativeModeTab(ResourceLocation resourceLocation, Item item) {
-		if (!creativeTabListenerRegistered) {
-			creativeTabListenerRegistered = true;
-			ItemGroupEvents.MODIFY_ENTRIES_ALL.register((tab, entries) -> {
-				final ResourceLocation tabId = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
-				if (tabId != null) {
-					final List<Item> items = creativeTabItems.get(tabId);
-					if (items != null) {
-						items.forEach(entries::accept);
-					}
-				}
-			});
-		}
-		creativeTabItems.computeIfAbsent(resourceLocation, k -> new ArrayList<>()).add(item);
 	}
 
 	public static Packet<?> createAddEntityPacket(Entity entity) {

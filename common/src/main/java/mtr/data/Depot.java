@@ -84,7 +84,7 @@ public class Depot extends AreaBase implements IReducedSaveData {
 		deployIndex = messagePackHelper.getInt(KEY_DEPLOY_INDEX);
 		repeatInfinitely = messagePackHelper.getBoolean(KEY_REPEAT_INFINITELY);
 		cruisingAltitude = messagePackHelper.getInt(KEY_CRUISING_ALTITUDE);
-		lastDeployedMillis = System.currentTimeMillis() - messagePackHelper.getLong(KEY_LAST_DEPLOYED);
+		lastDeployedMillis = messagePackHelper.getLong(KEY_LAST_DEPLOYED);
 	}
 
 	@Deprecated
@@ -100,7 +100,7 @@ public class Depot extends AreaBase implements IReducedSaveData {
 			frequencies[i] = compoundTag.getInt(KEY_FREQUENCIES + i);
 		}
 
-		lastDeployedMillis = System.currentTimeMillis() - compoundTag.getLong(KEY_LAST_DEPLOYED);
+		lastDeployedMillis = compoundTag.getLong(KEY_LAST_DEPLOYED);
 		deployIndex = compoundTag.getInt(KEY_DEPLOY_INDEX);
 		repeatInfinitely = compoundTag.getBoolean(KEY_REPEAT_INFINITELY);
 		cruisingAltitude = compoundTag.getInt(KEY_CRUISING_ALTITUDE);
@@ -135,7 +135,7 @@ public class Depot extends AreaBase implements IReducedSaveData {
 	public void toMessagePack(MessagePacker messagePacker) throws IOException {
 		toReducedMessagePack(messagePacker);
 		messagePacker.packString(KEY_DEPLOY_INDEX).packInt(deployIndex);
-		messagePacker.packString(KEY_LAST_DEPLOYED).packLong(System.currentTimeMillis() - lastDeployedMillis);
+		messagePacker.packString(KEY_LAST_DEPLOYED).packLong(lastDeployedMillis);
 	}
 
 	@Override
