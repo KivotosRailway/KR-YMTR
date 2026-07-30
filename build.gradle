@@ -2,14 +2,14 @@ import groovy.json.JsonSlurper
 import org.apache.tools.ant.filters.ReplaceTokens
 
 plugins {
-    id "java"
-    id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "de.undercouch.download" version "+"
-    id "dev.architectury.loom" version "1.5.+" apply false
-    id "com.github.johnrengelman.shadow" version "+" apply false
+	id "java"
+	id "architectury-plugin" version "3.4-SNAPSHOT"
+	id "de.undercouch.download" version "+"
+	id "dev.architectury.loom" version "1.5.+" apply false
+	id "com.github.johnrengelman.shadow" version "+" apply false
 }
 
-def default_minecraft_version = "1.20.1"
+def default_minecraft_version = "1.19.2"
 def minecraft_version = rootProject.properties.containsKey("buildVersion") ? rootProject.getProperties().get("buildVersion").toString() : default_minecraft_version
 def minecraft_main_version = minecraft_version.split("\\.")[1] as int
 def patreon_api_key = rootProject.properties.containsKey("patreonApiKey") ? rootProject.getProperties().get("patreonApiKey").toString() : ""
@@ -18,11 +18,33 @@ boolean parchment_not_avail = false
 String parchment_version = parchment_not_avail ? "N/A" : new XmlSlurper().parse("https://ldtteam.jfrog.io/artifactory/parchmentmc-internal/org/parchmentmc/data/parchment-${minecraft_version}/maven-metadata.xml").versioning.release
 def testServer = rootProject.properties.containsKey("testServer") ? rootProject.getProperties().get("testServer").toString() : ""
 
-rootProject.ext.fabric_loader_version = ["1.20.1", "0.19.1"]
-rootProject.ext.forge_version = "1.20.1-47.4.10"
-rootProject.ext.fabric_api_data = ["0.92.7+1.20.1", ""]
-rootProject.ext.mod_menu_data = ["7.2.2", ""]
-rootProject.ext.architectury_data = ["9.2.14", ""]
+def fabric_loader_versions = [
+		"1.20.1": "0.19.2",
+		"1.19.2": "0.19.3"
+]
+def forge_versions = [
+		"1.20.1": "1.20.1-47.4.22",
+		"1.19.2": "1.19.2-43.5.2"
+]
+def fabric_api_versions = [
+		"1.20.1": "0.92.11+1.20.1",
+		"1.19.2": "0.77.0+1.19.2"
+]
+def mod_menu_versions = [
+		"1.20.1": "7.2.2",
+		"1.19.2": "4.2.0-beta.2"
+]
+def architectury_versions = [
+		"1.20.1": "9.2.14",
+		"1.19.2": "6.6.92"
+]
+
+rootProject.ext.minecraft_version = minecraft_version
+rootProject.ext.fabric_loader_version = [minecraft_version, fabric_loader_versions[minecraft_version]]
+rootProject.ext.forge_version = forge_versions[minecraft_version]
+rootProject.ext.fabric_api_data = [fabric_api_versions[minecraft_version], ""]
+rootProject.ext.mod_menu_data = [mod_menu_versions[minecraft_version], ""]
+rootProject.ext.architectury_data = [architectury_versions[minecraft_version], ""]
 
 rootProject.ext.architectury_id = minecraft_main_version == 16 ? "me.shedaniel" : "dev.architectury"
 rootProject.ext.variation = rootProject.properties.containsKey("variation") ? rootProject.getProperties().get("variation").toString() : "normal"
@@ -57,9 +79,9 @@ subprojects {
 		implementation name: "Dynmap-3.2.1"
 		implementation name: "BlueMapAPI-2.1.1"
 		implementation "xyz.jpenilla:squaremap-api:1.2.1"
-        implementation "net.kyori:adventure-api:4.13.1"
-        implementation "net.kyori:adventure-text-minimessage:4.13.1"
-        implementation "net.kyori:adventure-text-serializer-gson:4.13.1"
+		implementation "net.kyori:adventure-api:4.13.1"
+		implementation "net.kyori:adventure-text-minimessage:4.13.1"
+		implementation "net.kyori:adventure-text-serializer-gson:4.13.1"
 		implementation "org.eclipse.jetty:jetty-http:9.+"
 		implementation "org.eclipse.jetty:jetty-io:9.+"
 		implementation "org.eclipse.jetty:jetty-security:9.+"
@@ -133,12 +155,12 @@ tasks.register("setupFiles") {
 	}
 	if (rootProject.variation == "normal" || rootProject.variation == "server") {
 		download.run {
-            src "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"
+			src "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"
 			dest "common/src/main/resources/assets/mtr/website/fabric.min.js"
 			overwrite true
 			retries - 1
 		}
-			download.run {
+		download.run {
 			src "https://gp3e.saobby.com/i/C2hOSxdTiYpoJxZ7.js"
 			dest "common/src/main/resources/assets/mtr/website/fontfaceobserver.standalone.js"
 			overwrite true
@@ -166,7 +188,7 @@ tasks.register("setupFiles") {
 		into "forge/src/main/resources"
 	}
 
-    /*
+	/*
     download.run {
         src "https://crowdin.com/backend/download/project/minecraft-transit-railway.zip"
         dest "common/src/main/java/mtr/mappings/lang.zip"
@@ -238,21 +260,21 @@ allprojects {
 	version = minecraft_version + "-" + rootProject.mod_version
 	group = rootProject.maven_group
 
-    repositories {
-        mavenCentral()
-        maven { url = "https://jitpack.io/" }
-        maven { url = "https://maven.terraformersmc.com/" }
-        maven { url = "https://repo.papermc.io/repository/maven-public/" }
-        maven { url = "https://libraries.minecraft.net/" }
-        maven { url = "https://repo.spongepowered.org/repository/maven-public/" }
-        maven {
-            name = 'ParchmentMC'
-            url = 'https://maven.parchmentmc.org'
-        }
-        flatDir {
-            dirs "../libs"
-        }
-    }
+	repositories {
+		mavenCentral()
+		maven { url = "https://jitpack.io/" }
+		maven { url = "https://maven.terraformersmc.com/" }
+		maven { url = "https://repo.papermc.io/repository/maven-public/" }
+		maven { url = "https://libraries.minecraft.net/" }
+		maven { url = "https://repo.spongepowered.org/repository/maven-public/" }
+		maven {
+			name = 'ParchmentMC'
+			url = 'https://maven.parchmentmc.org'
+		}
+		flatDir {
+			dirs "../libs"
+		}
+	}
 
 
 	afterEvaluate {

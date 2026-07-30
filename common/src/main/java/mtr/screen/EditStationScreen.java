@@ -157,7 +157,6 @@ public class EditStationScreen extends EditNameColorScreenBase<Station> {
 
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-		// 直接渲染，不再包裹 try-catch
 		guiGraphics.fill(0, 0, width, height, 0xE6101010);
 		final int currentColor = colorSelector.getColor();
 		final float elapsed = (Util.getMillis() - startTime) / 1000f;

@@ -1,6 +1,7 @@
 package mtr.screen;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import mtr.client.ClientData;
 import mtr.client.IDrawing;
@@ -9,7 +10,7 @@ import mtr.data.NameColorDataBase;
 import mtr.mappings.Text;
 import mtr.mappings.UtilitiesClient;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.screens.Screen;
@@ -148,8 +149,8 @@ public class DashboardList implements IGui {
 		this.hasDelete = hasPermission && hasDelete;
 	}
 
-	public void render(GuiGraphics guiGraphics, Font textRenderer) {
-		guiGraphics.drawCenteredString(textRenderer, String.format("%s/%s", page + 1, totalPages), x + SQUARE_SIZE * 2, y + TEXT_PADDING + TEXT_FIELD_PADDING / 2, ARGB_WHITE);
+	public void render(PoseStack matrices, Font textRenderer) {
+		Gui.drawCenteredString(matrices, textRenderer, String.format("%s/%s", page + 1, totalPages), x + SQUARE_SIZE * 2, y + TEXT_PADDING + TEXT_FIELD_PADDING / 2, ARGB_WHITE);
 		final int itemsToShow = itemsToShow();
 		for (int i = 0; i < itemsToShow; i++) {
 			if (i + itemsToShow * page < dataFiltered.size()) {
@@ -158,25 +159,24 @@ public class DashboardList implements IGui {
 				Collections.sort(sortedKeys);
 				final NameColorDataBase data = dataFiltered.get(sortedKeys.get(i + itemsToShow * page));
 
-				guiGraphics.fill(
-						x + TEXT_PADDING,
-						y + drawY,
-						x + TEXT_PADDING + TEXT_HEIGHT,
-						y + drawY + TEXT_HEIGHT,
-						ARGB_BLACK | data.color
-				);
+				Tesselator tesselator = Tesselator.getInstance();
+				BufferBuilder buffer = tesselator.getBuilder();
+				UtilitiesClient.beginDrawingRectangle(buffer);
+				IDrawing.drawRectangle(buffer, x + TEXT_PADDING, y + drawY, x + TEXT_PADDING + TEXT_HEIGHT, y + drawY + TEXT_HEIGHT, ARGB_BLACK | data.color);
+				tesselator.end();
+				UtilitiesClient.finishDrawingRectangle();
 
 				final String drawString = IGui.formatStationName(data.name);
 				final int textStart = TEXT_PADDING * 2 + TEXT_HEIGHT;
 				final int textWidth = textRenderer.width(drawString);
 				final int availableSpace = width - textStart;
-				guiGraphics.pose().pushPose();
-				guiGraphics.pose().translate(x + textStart, 0, 0);
+				matrices.pushPose();
+				matrices.translate(x + textStart, 0, 0);
 				if (textWidth > availableSpace) {
-					guiGraphics.pose().scale((float) availableSpace / textWidth, 1, 1);
+					matrices.scale((float) availableSpace / textWidth, 1, 1);
 				}
-				guiGraphics.drawString(textRenderer, drawString, 0, y + drawY, ARGB_WHITE);
-				guiGraphics.pose().popPose();
+				textRenderer.draw(matrices, drawString, 0, y + drawY, ARGB_WHITE);
+				matrices.popPose();
 			}
 		}
 	}

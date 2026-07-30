@@ -1,5 +1,6 @@
 package mtr.screen;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.client.ClientData;
 import mtr.client.IDrawing;
 import mtr.data.*;
@@ -7,7 +8,6 @@ import mtr.mappings.Text;
 import mtr.mappings.UtilitiesClient;
 import mtr.packet.PacketTrainDataGuiClient;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.StringUtils;
@@ -191,32 +191,32 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 	}
 
 	@Override
-	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+	public void render(PoseStack matrices, int mouseX, int mouseY, float delta) {
 		try {
-			renderBackground(guiGraphics);
-			guiGraphics.vLine(rightPanelsX - 1, -1, height, ARGB_WHITE_TRANSLUCENT);
-			renderTextFields(guiGraphics);
+			renderBackground(matrices);
+			vLine(matrices, rightPanelsX - 1, -1, height, ARGB_WHITE_TRANSLUCENT);
+			renderTextFields(matrices);
 
 			if (showScheduleControls && data.useRealTime) {
-				departuresList.render(guiGraphics, font);
+				departuresList.render(matrices, font);
 			}
 
 			final int lineHeight = Math.min(SQUARE_SIZE, (height - SQUARE_SIZE * 2) / Depot.HOURS_IN_DAY);
 			for (int i = 0; i < Depot.HOURS_IN_DAY; i++) {
 				if (showScheduleControls && !data.useRealTime) {
-					guiGraphics.drawString(font, getTimeString(i), TEXT_PADDING, SQUARE_SIZE * 2 + lineHeight * i + (int) ((lineHeight - TEXT_HEIGHT) / 2F), ARGB_WHITE);
+					drawString(matrices, font, getTimeString(i), TEXT_PADDING, SQUARE_SIZE * 2 + lineHeight * i + (int) ((lineHeight - TEXT_HEIGHT) / 2F), ARGB_WHITE);
 				}
 				UtilitiesClient.setWidgetY(sliders[i], SQUARE_SIZE * 2 + lineHeight * i);
 				sliders[i].setHeight(lineHeight);
 			}
 
-			super.render(guiGraphics, mouseX, mouseY, delta);
+			super.render(matrices, mouseX, mouseY, delta);
 
 			final int yStartRightPane = PANELS_START + SQUARE_SIZE * (checkboxRepeatIndefinitely.visible ? 3 : 2) + (showCruisingAltitude ? SQUARE_SIZE + TEXT_FIELD_PADDING : 0) + TEXT_PADDING;
 			if (showCruisingAltitude) {
-				guiGraphics.drawString(font, cruisingAltitudeText, rightPanelsX + TEXT_PADDING, PANELS_START + SQUARE_SIZE * 2 + TEXT_PADDING + TEXT_FIELD_PADDING / 2, ARGB_WHITE);
+				font.draw(matrices, cruisingAltitudeText, rightPanelsX + TEXT_PADDING, PANELS_START + SQUARE_SIZE * 2 + TEXT_PADDING + TEXT_FIELD_PADDING / 2F, ARGB_WHITE);
 			}
-			guiGraphics.drawString(font, Text.translatable("gui.mtr.sidings_in_depot", sidingsInDepot.size()), rightPanelsX + TEXT_PADDING, yStartRightPane, ARGB_WHITE);
+			font.draw(matrices, Text.translatable("gui.mtr.sidings_in_depot", sidingsInDepot.size()), rightPanelsX + TEXT_PADDING, yStartRightPane, ARGB_WHITE);
 
 			final Component text;
 			data.generateTempDepartures(Minecraft.getInstance().level);
@@ -229,16 +229,16 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 			} else {
 				text = Text.translatable("gui.mtr.next_departure_none");
 			}
-			guiGraphics.drawString(font, text, rightPanelsX + TEXT_PADDING, yStartRightPane + SQUARE_SIZE, ARGB_WHITE);
+			font.draw(matrices, text, rightPanelsX + TEXT_PADDING, yStartRightPane + SQUARE_SIZE, ARGB_WHITE);
 
 			final String[] stringSplit = getSuccessfulSegmentsText().getString().split("\\|");
 			for (int i = 0; i < stringSplit.length; i++) {
-				guiGraphics.drawString(font, stringSplit[i], rightPanelsX + TEXT_PADDING, yStartRightPane + SQUARE_SIZE * 2 + (TEXT_HEIGHT + TEXT_PADDING) * i, ARGB_WHITE);
+				font.draw(matrices, stringSplit[i], rightPanelsX + TEXT_PADDING, yStartRightPane + SQUARE_SIZE * 2 + (TEXT_HEIGHT + TEXT_PADDING) * i, ARGB_WHITE);
 			}
 
 			if (showScheduleControls && !data.useRealTime) {
-				guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.game_time"), sliderX / 2, SQUARE_SIZE + TEXT_PADDING, ARGB_LIGHT_GRAY);
-				guiGraphics.drawCenteredString(font, Text.translatable("gui.mtr.vehicles_per_hour"), sliderX + sliderWidthWithText / 2, SQUARE_SIZE + TEXT_PADDING, ARGB_LIGHT_GRAY);
+				drawCenteredString(matrices, font, Text.translatable("gui.mtr.game_time"), sliderX / 2, SQUARE_SIZE + TEXT_PADDING, ARGB_LIGHT_GRAY);
+				drawCenteredString(matrices, font, Text.translatable("gui.mtr.vehicles_per_hour"), sliderX + sliderWidthWithText / 2, SQUARE_SIZE + TEXT_PADDING, ARGB_LIGHT_GRAY);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
