@@ -4,6 +4,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 loom {
 	forge {
 		mixinConfig "mtr.mixins.json"
+		mixinConfig "mtr.voxy.mixins.json"
 	}
 }
 

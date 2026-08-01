@@ -103,6 +103,9 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	}
 
 	public static void render(EntitySeat entity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumers) {
+		// Voxy兼容 修复开光影时远处列车、轨道透视穿墙的问题
+		VoxyDepthCompat.writeLodDepthToCurrentFramebuffer();
+
 		final Minecraft client = Minecraft.getInstance();
 		final boolean backupRendering = entity == null;
 

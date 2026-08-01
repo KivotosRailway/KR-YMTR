@@ -26,7 +26,8 @@
 		]
 	},
 	"mixins": [
-		"mtr.mixins.json"
+		"mtr.mixins.json",
+		"mtr.voxy.mixins.json"
 	],
 	"depends": {
 		"fabric": "*",
