@@ -39,7 +39,9 @@ public final class VoxyDepthCompat {
 	private static boolean loggedActive;
 
 	// 反射缓存
-	private static Object voxyRenderSystem; // VoxyRenderSystem 实例（从 levelRenderer 引导）
+	private static Object voxyRenderSystem; // VoxyRenderSystem 实例（首帧引导用）
+	private static Method voxyGetRenderSystemMethod; // IGetVoxyRenderSystem.voxy$getRenderSystem（每次调用实时获取实例）
+	private static Field voxyRenderSystemField; // 老版本 Voxy 的 mixin 字段（无接口方法时的备选引导）
 	private static Method getViewportMethod;
 	private static Field pipelineField;
 	private static Field fbField; // AbstractRenderPipeline.fb（Normal 管线深度源）
@@ -51,6 +53,9 @@ public final class VoxyDepthCompat {
 	private static Method transformBlitDepthMethod;
 	private static Field vanillaProjectionField;
 	private static Field modelViewField;
+	private static Field capturedFogEndField; // VoxyRenderSystem.capturedFogEnd（保险 1 增强：不依赖雾调用链）
+	private static boolean fogClampedLogged;
+	private static boolean loggedNotPresent;
 
 	private VoxyDepthCompat() {
 	}
@@ -67,7 +72,38 @@ public final class VoxyDepthCompat {
 			return;
 		}
 		try {
-			final Object viewport = getViewportMethod.invoke(voxyRenderSystem);
+			// 每次调用重新获取 VoxyRenderSystem 实例：光影开关会触发 Voxy 渲染系统重建
+			// （voxy$reloadVoxyRenderer：shutdown + 重建），旧实例的 GL 对象（fb/纹理）已被释放，
+			// 缓存实例会让 blit 全部失败。反射 Method/Field 是类级别的，不受实例重建影响。
+			final Object renderSystem;
+			if (voxyGetRenderSystemMethod != null) {
+				renderSystem = voxyGetRenderSystemMethod.invoke(Minecraft.getInstance().levelRenderer);
+			} else if (voxyRenderSystemField != null) {
+				renderSystem = voxyRenderSystemField.get(Minecraft.getInstance().levelRenderer);
+			} else {
+				return;
+			}
+			if (renderSystem == null) {
+				return; // Voxy 渲染系统当前不可用（未创建/重建中）
+			}
+
+			// 保险 1 增强：每帧直接钳制 capturedFogEnd（不依赖 Voxy 的 MixinFogRenderer 调用链——
+			// 开光影时光影接管雾渲染，FogRenderer.setupFog 可能不被调用，导致 Voxy 原深度回写
+			// 因 fog 判断被跳过）。这里在 MTR 绘制点无条件保证下一帧 Voxy finish() 的
+			// fogCoversAllRendering 恒为 false，Voxy 原逻辑的深度回写照常执行。
+			if (capturedFogEndField != null) {
+				final float renderDistance = Minecraft.getInstance().gameRenderer.getRenderDistance();
+				final float fogEnd = capturedFogEndField.getFloat(renderSystem);
+				if (fogEnd < renderDistance) {
+					capturedFogEndField.setFloat(renderSystem, renderDistance + 16);
+					if (!fogClampedLogged) {
+						fogClampedLogged = true;
+						LOGGER.info("[MTR-Voxy] capturedFogEnd clamped {} -> {} (LOD depth write guaranteed)", fogEnd, renderDistance + 16);
+					}
+				}
+			}
+
+			final Object viewport = getViewportMethod.invoke(renderSystem);
 			if (viewport == null) {
 				return; // Voxy 阴影渲染阶段，无 LOD 可写
 			}
@@ -75,7 +111,7 @@ public final class VoxyDepthCompat {
 			if (targetFramebuffer == 0) {
 				return; // 默认帧缓冲无法作为深度写入目标（Voxy 自身限制）
 			}
-			final Object pipeline = pipelineField.get(voxyRenderSystem);
+			final Object pipeline = pipelineField.get(renderSystem);
 			final Object depthFramebuffer;
 			final Field blit;
 			if (fbTranslucentField != null && pipeline.getClass().getName().endsWith("IrisVoxyRenderPipeline")) {
@@ -176,23 +212,24 @@ public final class VoxyDepthCompat {
 				return;
 			}
 
-			// 路径 1：接口方法
-			Method getter = null;
+			// 路径 1：接口方法（缓存 Method 供每次调用实时获取实例）
+			voxyGetRenderSystemMethod = null;
 			for (Method method : levelRenderer.getClass().getMethods()) {
 				if ("voxy$getRenderSystem".equals(method.getName())) {
-					getter = method;
+					voxyGetRenderSystemMethod = method;
 					break;
 				}
 			}
-			if (getter != null) {
-				voxyRenderSystem = getter.invoke(levelRenderer);
+			if (voxyGetRenderSystemMethod != null) {
+				voxyRenderSystem = voxyGetRenderSystemMethod.invoke(levelRenderer);
 			}
 
-			// 路径 2：mixin @Unique 字段枚举（类型名为 VoxyRenderSystem 的字段）
+			// 路径 2：mixin @Unique 字段枚举（类型名为 VoxyRenderSystem 的字段；缓存 Field 供实时获取）
 			if (voxyRenderSystem == null) {
 				for (Field field : levelRenderer.getClass().getDeclaredFields()) {
 					if (field.getType().getName().endsWith("VoxyRenderSystem")) {
 						field.setAccessible(true);
+						voxyRenderSystemField = field;
 						voxyRenderSystem = field.get(levelRenderer);
 						if (voxyRenderSystem != null) {
 							LOGGER.info("[MTR-Voxy] Located Voxy render system via field '{}'", field.getName());
@@ -202,7 +239,11 @@ public final class VoxyDepthCompat {
 				}
 			}
 			if (voxyRenderSystem == null) {
-				LOGGER.info("[MTR-Voxy] Voxy render system not present, depth compat inactive (expected when Voxy is not installed)");
+				if (!loggedNotPresent) {
+					loggedNotPresent = true;
+					LOGGER.info("[MTR-Voxy] Voxy render system not present yet, depth compat will retry (expected when Voxy is not installed; will recover when Voxy renderer is created)");
+				}
+				initialized = false; // 允许重试：Voxy 渲染系统可能在光影切换/世界加载后才创建
 				return;
 			}
 
@@ -218,6 +259,8 @@ public final class VoxyDepthCompat {
 			getViewportMethod = voxyRenderSystem.getClass().getMethod("getViewport");
 			pipelineField = voxyRenderSystem.getClass().getDeclaredField("pipeline");
 			pipelineField.setAccessible(true);
+			capturedFogEndField = voxyRenderSystem.getClass().getDeclaredField("capturedFogEnd");
+			capturedFogEndField.setAccessible(true);
 			fbField = abstractPipelineClass.getDeclaredField("fb");
 			fbField.setAccessible(true);
 			blitField = normalPipelineClass.getDeclaredField("finalBlit");
