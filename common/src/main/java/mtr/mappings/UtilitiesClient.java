@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import mtr.client.Config;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -70,7 +71,7 @@ public interface UtilitiesClient {
 	}
 
 	static int getRenderDistance() {
-		return Minecraft.getInstance().options.renderDistance().get();
+		return Math.max(Minecraft.getInstance().options.renderDistance().get(), (int) Math.ceil(Config.getRailRenderDistanceBlocks() / 16.0));
 	}
 
 	static List<Resource> getResources(ResourceManager resourceManager, ResourceLocation resourceLocation) throws IOException {

@@ -37,6 +37,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.StringUtils;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -103,7 +104,6 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	}
 
 	public static void render(EntitySeat entity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumers) {
-		// Voxy兼容 修复开光影时远处列车、轨道透视穿墙的问题
 		VoxyDepthCompat.writeLodDepthToCurrentFramebuffer();
 
 		final Minecraft client = Minecraft.getInstance();
@@ -284,6 +284,9 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 
 		final boolean renderColors = isHoldingRailRelated(player);
 		final int maxRailDistance = maxRailRenderDistance;
+		// ANTE 距离 = max(实体渲染距离 × 16, 滑块轨道距离)：UtilitiesClient.getRenderDistance() 已按滑块放大，此处保持一致
+		anteFallbackActive = isAnteInstalled() && getAnteRailRenderLevel() >= 2;
+		anteFallbackMaxDistance = MTRClient.isReplayMod() ? 64 * 16 : Math.max(Minecraft.getInstance().options.renderDistance().get() * 16, maxRailRenderDistance);
 		final Map<UUID, RailType> renderedRailMap = new HashMap<>();
 		ClientData.RAILS.forEach((startPos, railMap) -> railMap.forEach((endPos, rail) -> {
 			if (!RailwayData.isBetween(player.getX(), startPos.getX(), endPos.getX(), maxRailDistance) || !RailwayData.isBetween(player.getZ(), startPos.getZ(), endPos.getZ(), maxRailDistance)) {
@@ -301,23 +304,23 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 
 			switch (rail.transportMode) {
 				case TRAIN:
-					renderRailStandard(world, rail, 0.0625F + SMALL_OFFSET, renderColors, 1);
+					renderRailStandardSafe(world, rail, 0.0625F + SMALL_OFFSET, renderColors, 1);
 					if (renderColors) {
 						renderSignalsStandard(world, matrices, vertexConsumers, rail, startPos, endPos);
 					}
 					break;
 				case BOAT:
 					if (renderColors) {
-						renderRailStandard(world, rail, 0.0625F + SMALL_OFFSET, true, 0.5F);
+						renderRailStandardSafe(world, rail, 0.0625F + SMALL_OFFSET, true, 0.5F);
 						renderSignalsStandard(world, matrices, vertexConsumers, rail, startPos, endPos);
 					}
 					break;
 				case CABLE_CAR:
 					if (rail.railType.hasSavedRail || rail.railType == RailType.CABLE_CAR_STATION) {
-						renderRailStandard(world, rail, 0.25F + SMALL_OFFSET, renderColors, 0.25F, "mtr:textures/block/metal.png", 0.25F, 0, 0.75F, 1);
+						renderRailStandardSafe(world, rail, 0.25F + SMALL_OFFSET, renderColors, 0.25F, "mtr:textures/block/metal.png", 0.25F, 0, 0.75F, 1);
 					}
 					if (renderColors && !rail.railType.hasSavedRail) {
-						renderRailStandard(world, rail, 0.5F + SMALL_OFFSET, true, 1, "mtr:textures/block/one_way_rail_arrow.png", 0, 0.75F, 1, 0.25F);
+						renderRailStandardSafe(world, rail, 0.5F + SMALL_OFFSET, true, 1, "mtr:textures/block/one_way_rail_arrow.png", 0, 0.75F, 1, 0.25F);
 					}
 
 					if (rail.railType != RailType.NONE) {
@@ -332,10 +335,10 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 					break;
 				case AIRPLANE:
 					if (renderColors) {
-						renderRailStandard(world, rail, 0.0625F + SMALL_OFFSET, true, 1);
+						renderRailStandardSafe(world, rail, 0.0625F + SMALL_OFFSET, true, 1);
 						renderSignalsStandard(world, matrices, vertexConsumers, rail, startPos, endPos);
 					} else {
-						renderRailStandard(world, rail, 0.0625F + SMALL_OFFSET, false, 0.25F, "textures/block/iron_block.png", 0.25F, 0, 0.75F, 1);
+						renderRailStandardSafe(world, rail, 0.0625F + SMALL_OFFSET, false, 0.25F, "textures/block/iron_block.png", 0.25F, 0, 0.75F, 1);
 					}
 					break;
 			}
@@ -504,6 +507,10 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 	}
 
 	private static void renderRailStandard(Level world, Rail rail, float yOffset, boolean renderColors, float railWidth, String texture, float u1, float v1, float u2, float v2) {
+		renderRailStandardInternal(world, rail, yOffset, renderColors, railWidth, texture, u1, v1, u2, v2);
+	}
+
+	private static void renderRailStandardInternal(Level world, Rail rail, float yOffset, boolean renderColors, float railWidth, String texture, float u1, float v1, float u2, float v2) {
 		final int maxRailDistance = maxRailRenderDistance;
 
 		rail.render((x1, z1, x2, z2, x3, z3, x4, z4, y1, y2) -> {
@@ -529,6 +536,75 @@ public class RenderTrains extends EntityRendererMapper<EntitySeat> implements IG
 				});
 			}
 		}, -railWidth, railWidth);
+	}
+
+	private static void renderRailStandardSafe(Level world, Rail rail, float yOffset, boolean renderColors, float railWidth) {
+		if (shouldUseAnteFallback(rail)) {
+			renderRailStandardInternal(world, rail, yOffset, renderColors, railWidth, renderColors && rail.railType == RailType.QUARTZ ? "mtr:textures/block/rail_preview.png" : "textures/block/rail.png", -1, -1, -1, -1);
+		} else {
+			renderRailStandard(world, rail, yOffset, renderColors, railWidth);
+		}
+	}
+
+	private static void renderRailStandardSafe(Level world, Rail rail, float yOffset, boolean renderColors, float railWidth, String texture, float u1, float v1, float u2, float v2) {
+		if (shouldUseAnteFallback(rail)) {
+			renderRailStandardInternal(world, rail, yOffset, renderColors, railWidth, texture, u1, v1, u2, v2);
+		} else {
+			renderRailStandard(world, rail, yOffset, renderColors, railWidth, texture, u1, v1, u2, v2);
+		}
+	}
+
+	private static boolean shouldUseAnteFallback(Rail rail) {
+		if (!anteFallbackActive) {
+			return false;
+		}
+		final LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return false;
+		}
+		final Vec3 startPos = rail.getPosition(0);
+		final Vec3 endPos = rail.getPosition(rail.getLength());
+		return manhattanXZ(player.getX(), player.getZ(), startPos) > anteFallbackMaxDistance
+				|| manhattanXZ(player.getX(), player.getZ(), endPos) > anteFallbackMaxDistance;
+	}
+
+	private static int manhattanXZ(double px, double pz, Vec3 pos) {
+		return (int) (Math.abs(px - pos.x) + Math.abs(pz - pos.z));
+	}
+
+	private static Boolean anteAvailable;
+	private static Method anteGetRailRenderLevelMethod;
+	private static boolean anteFallbackActive;
+	private static int anteFallbackMaxDistance;
+
+	private static boolean isAnteInstalled() {
+		if (anteAvailable == null) {
+			try {
+				Class.forName("cn.zbx1425.mtrsteamloco.render.rail.RailRenderDispatcher");
+				anteAvailable = true;
+			} catch (ClassNotFoundException | NoClassDefFoundError e) {
+				anteAvailable = false;
+			}
+		}
+		return anteAvailable;
+	}
+
+	private static int getAnteRailRenderLevel() {
+		if (!isAnteInstalled()) {
+			return 0;
+		}
+		if (anteGetRailRenderLevelMethod == null) {
+			try {
+				anteGetRailRenderLevelMethod = Class.forName("cn.zbx1425.mtrsteamloco.ClientConfig").getMethod("getRailRenderLevel");
+			} catch (Exception e) {
+				return 0;
+			}
+		}
+		try {
+			return (int) anteGetRailRenderLevelMethod.invoke(null);
+		} catch (Exception e) {
+			return 0;
+		}
 	}
 
 	private static void renderSignalsStandard(Level world, PoseStack matrices, MultiBufferSource vertexConsumers, Rail rail, BlockPos startPos, BlockPos endPos) {

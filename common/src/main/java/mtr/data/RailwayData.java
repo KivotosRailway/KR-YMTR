@@ -67,6 +67,7 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 	private final List<Map<UUID, Long>> trainPositions = new ArrayList<>(2);
 	private final Map<Player, BlockPos> playerLastUpdatedPositions = new HashMap<>();
 	private final List<Player> playersToSyncSchedules = new ArrayList<>();
+	private long railsPacketIdCounter;
 	private final UpdateNearbyMovingObjects<TrainServer> updateNearbyTrains;
 	private final UpdateNearbyMovingObjects<LiftServer> updateNearbyLifts;
 	private final Map<Long, List<ScheduleEntry>> schedulesForPlatform = new HashMap<>();
@@ -499,6 +500,7 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 			return;
 		}
 
+		final long packetId = ++railsPacketIdCounter;
 		final int MAX_SAFE = Math.min(MAX_PACKET_BYTES - 4096, RAIL_CHUNK_SIZE);
 		final List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> entries = new ArrayList<>(railsToAdd.entrySet());
 		final List<List<Map.Entry<BlockPos, Map<BlockPos, Rail>>>> chunks = new ArrayList<>();
@@ -530,6 +532,9 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 		for (int c = 0; c < chunks.size(); c++) {
 			final List<Map.Entry<BlockPos, Map<BlockPos, Rail>>> chunk = chunks.get(c);
 			final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+			packet.writeLong(packetId);
+			packet.writeInt(chunks.size());
+			packet.writeInt(c);
 			packet.writeInt(chunk.size());
 			for (final Map.Entry<BlockPos, Map<BlockPos, Rail>> entry : chunk) {
 				packet.writeBlockPos(entry.getKey());
