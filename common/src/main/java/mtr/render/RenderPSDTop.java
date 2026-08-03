@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> {
@@ -38,6 +39,9 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 			if (blockBelow instanceof BlockPSDAPGDoorBase) {
 				return RenderType.STATION_NAME;
 			} else if (!(blockBelow instanceof BlockPSDAPGGlassEndBase)) {
+				if (isDisplayMode2(world, pos)) {
+					return (Math.floorMod(pos.getX(), 8) < 4) == (Math.floorMod(pos.getZ(), 8) < 4) ? RenderType.ARROW : RenderType.ROUTE;
+				}
 				return RenderType.ROUTE;
 			} else {
 				return RenderType.NONE;
@@ -45,6 +49,16 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 		} else {
 			return persistent == BlockPSDTop.EnumPersistent.ARROW ? RenderType.ARROW : persistent == BlockPSDTop.EnumPersistent.ROUTE ? RenderType.ROUTE : RenderType.NONE;
 		}
+	}
+
+	private boolean isDisplayMode2(BlockGetter world, BlockPos pos) {
+		final BlockEntity blockEntity = world.getBlockEntity(pos);
+		if (blockEntity instanceof BlockPSDTop.TileEntityPSDTop) {
+			final long platformId = ((BlockPSDTop.TileEntityPSDTop) blockEntity).getPlatformId(ClientData.PLATFORMS, ClientData.DATA_CACHE);
+			final Platform platform = ClientData.DATA_CACHE.platformIdMap.get(platformId);
+			return platform != null && platform.getPsdDisplayMode() == 2;
+		}
+		return false;
 	}
 
 	@Override
@@ -127,7 +141,7 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 	@Override
 	protected String getStationNameForRendering(long platformId) {
 		final Platform platform = ClientData.DATA_CACHE.platformIdMap.get(platformId);
-		if (platform == null || platform.getPsdDisplayMode() != 1) {
+		if (platform == null || platform.getPsdDisplayMode() != 1 && platform.getPsdDisplayMode() != 2) {
 			return null;
 		}
 		final Station station = ClientData.DATA_CACHE.platformIdToStation.get(platformId);
