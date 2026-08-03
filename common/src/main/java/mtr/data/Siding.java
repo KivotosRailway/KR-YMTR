@@ -351,9 +351,6 @@ public class Siding extends SavedRailBase implements IPacket, IReducedSaveData {
 						if (platform != null) {
 							pd.adcTime = platform.getAdcTime();
 							if (depot != null) {
-								// Use stopIndex to find the correct route-specific platform settings
-								// instead of a flat platformId -> RoutePlatform HashMap which loses
-								// route context when multiple routes share the same platform.
 								final int stopIndex = pd.stopIndex - 1;
 								RailwayData.useRoutesAndStationsFromIndex(stopIndex, depot.routeIds, dataCache, (currentStationIndex, thisRoute, nextRoute, thisStation, nextStation, lastStation) -> {
 									if (thisRoute != null && currentStationIndex >= 0 && currentStationIndex < thisRoute.platformIds.size()) {

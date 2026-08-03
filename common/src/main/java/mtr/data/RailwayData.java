@@ -592,6 +592,10 @@ public class RailwayData extends PersistentStateMapper implements IPacket {
 
 	// other
 
+	public Map<BlockPos, Map<BlockPos, Rail>> getRailsMap() {
+		return rails;
+	}
+
 	public static void addRail(Map<BlockPos, Map<BlockPos, Rail>> rails, Set<Platform> platforms, Set<Siding> sidings, TransportMode transportMode, BlockPos posStart, BlockPos posEnd, Rail rail, long savedRailId) {
 		try {
 			if (!rails.containsKey(posStart)) {

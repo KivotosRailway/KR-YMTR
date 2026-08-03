@@ -10,6 +10,7 @@ import mtr.mappings.BlockEntityMapper;
 import mtr.mappings.RegistryUtilities;
 import mtr.packet.IPacket;
 import mtr.packet.PacketTrainDataGuiServer;
+import mtr.packet.PacketUpdateRailData;
 import mtr.servlet.Webserver;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -49,6 +50,7 @@ public class MTR implements IPacket {
 			BiConsumer<String, SoundEvent> registerSoundEvent
 	) {
 		registerItem.accept("brush", Items.BRUSH);
+		registerItem.accept("rail_data_editor", Items.RAIL_DATA_EDITOR);
 		registerItem.accept("escalator", Items.ESCALATOR);
 		registerItem.accept("lift_buttons_link_connector", Items.LIFT_BUTTONS_LINK_CONNECTOR);
 		registerItem.accept("lift_buttons_link_remover", Items.LIFT_BUTTONS_LINK_REMOVER);
@@ -427,6 +429,7 @@ public class MTR implements IPacket {
 			registerSoundEvent.accept("ticket_processor_fail", SoundEvents.TICKET_PROCESSOR_FAIL);
 		}
 
+		Registry.registerNetworkReceiver(PACKET_UPDATE_RAIL_DATA, PacketUpdateRailData::receiveUpdateC2S);
 		Registry.registerNetworkReceiver(PACKET_GENERATE_PATH, PacketTrainDataGuiServer::generatePathC2S);
 		Registry.registerNetworkReceiver(PACKET_CLEAR_TRAINS, PacketTrainDataGuiServer::clearTrainsC2S);
 		Registry.registerNetworkReceiver(PACKET_SIGN_TYPES, PacketTrainDataGuiServer::receiveSignIdsC2S);

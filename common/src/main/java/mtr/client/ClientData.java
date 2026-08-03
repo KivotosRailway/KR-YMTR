@@ -117,7 +117,6 @@ public final class ClientData {
 		final int chunkIndex = packet.readInt();
 		final Map<BlockPos, Map<BlockPos, Rail>> railsTemp = readRailsFromPacket(packet);
 		client.execute(() -> {
-			// 只接受当前批次的分片；批次不匹配（旧批次迟到或被新批次取代）时丢弃
 			if (packetId != pendingRailsPacketId || pendingRailsChunkCount == 0) {
 				return;
 			}
