@@ -56,6 +56,7 @@ public final class VoxyDepthCompat {
 	private static Field capturedFogEndField; // VoxyRenderSystem.capturedFogEnd（保险 1 增强：不依赖雾调用链）
 	private static boolean fogClampedLogged;
 	private static boolean loggedNotPresent;
+	private static int whiteTexture; // 1x1 白色纹理：blit 时绑 unit 3，防止 EMIT_COLOUR 分支因 alpha==0 discard 而吞掉深度写入
 
 	private VoxyDepthCompat() {
 	}
@@ -125,6 +126,16 @@ public final class VoxyDepthCompat {
 			final int depthTextureId = glTextureIdField.getInt(depthTexture);
 			final Matrix4f targetTransform = new Matrix4f((Matrix4f) vanillaProjectionField.get(viewport)).mul((Matrix4f) modelViewField.get(viewport));
 
+			// 1x1 白色纹理：finalBlit 编译时定义了 EMIT_COLOUR 宏，其分支会采样 unit 3 的颜色，
+			// 若 alpha==0 则 discard（连深度一起丢弃）——保险 2 执行时 unit 3 是 vanilla 的任意绑定
+			// （大概率 alpha=0），导致 LOD 深度从未写入。blit 前把 unit 3 绑到纯白纹理（alpha=1）绕过。
+			if (whiteTexture == 0) {
+				whiteTexture = GL11.glGenTextures();
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D, whiteTexture);
+				GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, java.nio.ByteBuffer.allocateDirect(4).put(new byte[]{(byte) 255, (byte) 255, (byte) 255, (byte) 255}).flip());
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+			}
+
 			final int oldProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
 			final int oldVao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
 			final int oldElementArrayBuffer = GL11.glGetInteger(GL15.GL_ELEMENT_ARRAY_BUFFER_BINDING);
@@ -152,6 +163,10 @@ public final class VoxyDepthCompat {
 				GL11.glDisable(GL11.GL_BLEND);
 				GL11.glEnable(GL11.GL_DEPTH_TEST);
 				GL11.glDepthFunc(GL11.GL_LEQUAL);
+				// unit 3 绑纯白纹理，防止 finalBlit 的 EMIT_COLOUR 分支因 alpha==0 discard 吞掉深度写入
+				GL13.glActiveTexture(GL13.GL_TEXTURE3);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D, whiteTexture);
+				GL13.glActiveTexture(GL13.GL_TEXTURE0);
 				transformBlitDepthMethod.invoke(null, blit.get(pipeline), depthTextureId, targetFramebuffer, viewport, targetTransform);
 			} finally {
 				// 完整恢复 GL 状态
