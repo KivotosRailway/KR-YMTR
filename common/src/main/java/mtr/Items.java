@@ -2,7 +2,19 @@ package mtr;
 
 import mtr.data.RailType;
 import mtr.data.TransportMode;
-import mtr.item.*;
+import mtr.item.ItemBridgeCreator;
+import mtr.item.ItemDashboard;
+import mtr.item.ItemEscalator;
+import mtr.item.ItemLiftButtonsLinkModifier;
+import mtr.item.ItemLiftRefresher;
+import mtr.item.ItemPSDAPGBase;
+import mtr.item.ItemRailDataEditor;
+import mtr.item.ItemRailModifier;
+import mtr.item.ItemResourcePackCreator;
+import mtr.item.ItemSignalModifier;
+import mtr.item.ItemTunnelCreator;
+import mtr.item.ItemTunnelWallCreator;
+import mtr.item.ItemWithCreativeTabBase;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 

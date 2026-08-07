@@ -4,7 +4,11 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import mtr.MTR;
-import mtr.data.*;
+import mtr.data.IGui;
+import mtr.data.Platform;
+import mtr.data.RailwayData;
+import mtr.data.Route;
+import mtr.data.Station;
 import mtr.mappings.Utilities;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
@@ -13,7 +17,13 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.Tuple;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 public class RouteMapGenerator implements IGui {

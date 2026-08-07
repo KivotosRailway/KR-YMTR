@@ -7,13 +7,11 @@ import mtr.data.RailwayData;
 import mtr.data.Route;
 import mtr.data.Station;
 import mtr.mappings.BlockEntityMapper;
-import mtr.mappings.RegistryUtilities;
 import mtr.packet.IPacket;
 import mtr.packet.PacketTrainDataGuiServer;
 import mtr.packet.PacketUpdateRailData;
 import mtr.servlet.Webserver;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -29,10 +27,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.function.BiConsumer;
 
+import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
-import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static com.mojang.brigadier.arguments.StringArgumentType.word;
 
 public class MTR implements IPacket {
 

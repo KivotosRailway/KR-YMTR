@@ -2,7 +2,21 @@ package mtr.client;
 
 import mtr.KeyMappings;
 import mtr.MTRClient;
-import mtr.data.*;
+import mtr.data.DataConverter;
+import mtr.data.Depot;
+import mtr.data.LiftClient;
+import mtr.data.NameColorDataBase;
+import mtr.data.Platform;
+import mtr.data.Rail;
+import mtr.data.RailwayData;
+import mtr.data.Route;
+import mtr.data.ScheduleEntry;
+import mtr.data.SerializedDataBase;
+import mtr.data.Siding;
+import mtr.data.SignalBlocks;
+import mtr.data.Station;
+import mtr.data.TrainClient;
+import mtr.data.TransportMode;
 import mtr.mappings.Text;
 import mtr.packet.PacketTrainDataGuiClient;
 import net.minecraft.client.Minecraft;
@@ -13,7 +27,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 public final class ClientData {
