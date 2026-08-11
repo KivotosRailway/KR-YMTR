@@ -2,22 +2,13 @@ package mtr.servlet;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import mtr.data.DataCache;
-import mtr.data.Platform;
-import mtr.data.RailwayData;
-import mtr.data.Route;
-import mtr.data.ScheduleEntry;
-import mtr.data.Station;
+import mtr.data.*;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ArrivalsServletHandler extends HttpServlet {
 

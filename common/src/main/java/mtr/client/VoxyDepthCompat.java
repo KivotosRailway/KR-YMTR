@@ -31,12 +31,20 @@ import java.lang.reflect.Method;
  */
 public final class VoxyDepthCompat {
 
+	/**
+	 * 保险 2（blit）开关：启动参数 -Dmtr.voxy.blitEnabled=false 可关闭（保留 fog 钳制）。
+	 * 用于 A/B 验证：保险 1 增强（fog 钳制）是否已足以让 Voxy 原深度回写工作——
+	 * 若足够，blit 冗余且可能累积 GL 状态问题，应永久关闭。
+	 */
+	private static final boolean BLIT_ENABLED = System.getProperty("mtr.voxy.blitEnabled", "true").equalsIgnoreCase("true");
+
 	private static final Logger LOGGER = LogManager.getLogger("MTR");
 
 	private static boolean initialized;
 	private static boolean available;
 	private static boolean loggedError;
 	private static boolean loggedActive;
+	private static boolean loggedGlError;
 
 	// 反射缓存
 	private static Object voxyRenderSystem; // VoxyRenderSystem 实例（首帧引导用）
@@ -126,6 +134,7 @@ public final class VoxyDepthCompat {
 			final int depthTextureId = glTextureIdField.getInt(depthTexture);
 			final Matrix4f targetTransform = new Matrix4f((Matrix4f) vanillaProjectionField.get(viewport)).mul((Matrix4f) modelViewField.get(viewport));
 
+			if (BLIT_ENABLED) {
 			// 1x1 白色纹理：finalBlit 编译时定义了 EMIT_COLOUR 宏，其分支会采样 unit 3 的颜色，
 			// 若 alpha==0 则 discard（连深度一起丢弃）——保险 2 执行时 unit 3 是 vanilla 的任意绑定
 			// （大概率 alpha=0），导致 LOD 深度从未写入。blit 前把 unit 3 绑到纯白纹理（alpha=1）绕过。
@@ -168,6 +177,13 @@ public final class VoxyDepthCompat {
 				GL11.glBindTexture(GL11.GL_TEXTURE_2D, whiteTexture);
 				GL13.glActiveTexture(GL13.GL_TEXTURE0);
 				transformBlitDepthMethod.invoke(null, blit.get(pipeline), depthTextureId, targetFramebuffer, viewport, targetTransform);
+
+				// GL 错误观测：blit 若持续产生 GL 错误（累积性问题：玩久了半透明丢失的嫌疑源），打印一次定位
+				final int glError = GL11.glGetError();
+				if (glError != GL11.GL_NO_ERROR && !loggedGlError) {
+					loggedGlError = true;
+					LOGGER.error("[MTR-Voxy] GL error 0x{} after depth blit — potential cause of translucent LOD loss over time", Integer.toHexString(glError));
+				}
 			} finally {
 				// 完整恢复 GL 状态
 				GL11.glColorMask(oldColorMask[0] != 0, oldColorMask[1] != 0, oldColorMask[2] != 0, oldColorMask[3] != 0);
@@ -204,6 +220,7 @@ public final class VoxyDepthCompat {
 				loggedActive = true;
 				LOGGER.info("[MTR-Voxy] Voxy LOD depth write active (first frame OK, target framebuffer " + targetFramebuffer + ")");
 			}
+			} // BLIT_ENABLED
 		} catch (Throwable t) {
 			if (!loggedError) {
 				loggedError = true;

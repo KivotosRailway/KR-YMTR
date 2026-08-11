@@ -2,20 +2,14 @@ package mtr.data;
 
 import mtr.MtrDebug;
 import mtr.TrigCache;
-import mtr.block.BlockPSDAPGDoorBase;
-import mtr.block.BlockTrainAnnouncer;
-import mtr.block.BlockTrainCargoLoader;
-import mtr.block.BlockTrainCargoUnloader;
-import mtr.block.BlockTrainRedstoneSensor;
-import mtr.block.BlockTrainSensorBase;
-import mtr.block.IBlock;
+import mtr.block.*;
 import mtr.mappings.Utilities;
 import mtr.path.PathData;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
@@ -29,13 +23,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.msgpack.value.Value;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class TrainServer extends Train {

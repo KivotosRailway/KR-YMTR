@@ -2,17 +2,7 @@ package mtr.screen;
 
 import mtr.client.ClientData;
 import mtr.client.IDrawing;
-import mtr.data.AreaBase;
-import mtr.data.DataConverter;
-import mtr.data.Depot;
-import mtr.data.IGui;
-import mtr.data.NameColorDataBase;
-import mtr.data.Platform;
-import mtr.data.Route;
-import mtr.data.SavedRailBase;
-import mtr.data.Siding;
-import mtr.data.Station;
-import mtr.data.TransportMode;
+import mtr.data.*;
 import mtr.mappings.ScreenMapper;
 import mtr.mappings.Text;
 import mtr.mappings.UtilitiesClient;

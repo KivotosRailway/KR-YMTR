@@ -27,12 +27,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-import static mtr.data.IGui.ARGB_BLACK;
-import static mtr.data.IGui.ARGB_WHITE;
-import static mtr.data.IGui.HorizontalAlignment;
-import static mtr.data.IGui.MAX_LIGHT_GLOWING;
-import static mtr.data.IGui.SMALL_OFFSET;
-import static mtr.data.IGui.VerticalAlignment;
+import static mtr.data.IGui.*;
 
 public class RenderLiftPanel<T extends BlockLiftPanelBase.TileEntityLiftPanel1Base> extends BlockEntityRendererMapper<T> {
 
