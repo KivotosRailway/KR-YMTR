@@ -34,6 +34,7 @@ dependencies {
 	forgeRuntimeLibrary "org.eclipse.jetty:jetty-util-ajax:9.+"
 	forgeRuntimeLibrary "javax.servlet:javax.servlet-api:+"
 	forgeRuntimeLibrary "org.msgpack:msgpack-core:+"
+	forgeRuntimeLibrary "com.googlecode.soundlibs:mp3spi:1.9.5.4"
 
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }

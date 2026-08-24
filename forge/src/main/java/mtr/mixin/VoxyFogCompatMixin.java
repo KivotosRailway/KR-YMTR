@@ -42,10 +42,11 @@ public abstract class VoxyFogCompatMixin {
 			final float fogEnd = capturedFogEndField.getFloat(this);
 			final float renderDistance = Minecraft.getInstance().gameRenderer.getRenderDistance();
 			if (fogEnd < renderDistance) {
-				capturedFogEndField.setFloat(this, renderDistance + 16);
+				// 钳到 Voxy 设计雾距量级（32768），不能压缩到渲染距离附近，否则半透明 LOD 被雾覆盖
+				capturedFogEndField.setFloat(this, 32768.0f);
 				if (!mtr$logged) {
 					mtr$logged = true;
-					LOGGER.info("[MTR-Voxy] VoxyFogCompatMixin active: capturedFogEnd {} -> {} (LOD depth write guaranteed)", fogEnd, renderDistance + 16);
+					LOGGER.info("[MTR-Voxy] VoxyFogCompatMixin active: capturedFogEnd {} -> 32768.0 (LOD depth write guaranteed)", fogEnd);
 				}
 			} else if (!mtr$logged) {
 				mtr$logged = true;

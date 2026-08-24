@@ -64,6 +64,7 @@ public final class VoxyDepthCompat {
 	private static Field capturedFogEndField; // VoxyRenderSystem.capturedFogEnd（保险 1 增强：不依赖雾调用链）
 	private static boolean fogClampedLogged;
 	private static boolean loggedNotPresent;
+	private static float lastFogValue = Float.NaN;
 	private static int whiteTexture; // 1x1 白色纹理：blit 时绑 unit 3，防止 EMIT_COLOUR 分支因 alpha==0 discard 而吞掉深度写入
 
 	private VoxyDepthCompat() {
@@ -100,15 +101,23 @@ public final class VoxyDepthCompat {
 			// 开光影时光影接管雾渲染，FogRenderer.setupFog 可能不被调用，导致 Voxy 原深度回写
 			// 因 fog 判断被跳过）。这里在 MTR 绘制点无条件保证下一帧 Voxy finish() 的
 			// fogCoversAllRendering 恒为 false，Voxy 原逻辑的深度回写照常执行。
+			// 注意：capturedFogEnd 同时是 Voxy finish 的雾参数（雾距），钳制目标必须用 Voxy 的
+			// 设计雾距量级（sectionRenderDistance*32*16≈32768），不能压缩到渲染距离附近，
+			// 否则半透明 LOD（水/玻璃）的雾在近处结束，被雾覆盖而不渲染/闪烁。
 			if (capturedFogEndField != null) {
 				final float renderDistance = Minecraft.getInstance().gameRenderer.getRenderDistance();
 				final float fogEnd = capturedFogEndField.getFloat(renderSystem);
 				if (fogEnd < renderDistance) {
-					capturedFogEndField.setFloat(renderSystem, renderDistance + 16);
+					capturedFogEndField.setFloat(renderSystem, 32768.0f);
 					if (!fogClampedLogged) {
 						fogClampedLogged = true;
-						LOGGER.info("[MTR-Voxy] capturedFogEnd clamped {} -> {} (LOD depth write guaranteed)", fogEnd, renderDistance + 16);
+						LOGGER.info("[MTR-Voxy] capturedFogEnd clamped {} -> 32768.0 (LOD depth write guaranteed)", fogEnd);
 					}
+				}
+				// 观测：值变化时打印（区分「特定光影下钳制是否发生」）
+				if (fogEnd != lastFogValue) {
+					lastFogValue = fogEnd;
+					LOGGER.info("[MTR-Voxy] capturedFogEnd now {}", fogEnd);
 				}
 			}
 

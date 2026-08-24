@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -198,16 +199,23 @@ public class PacketTrainDataGuiClient extends PacketTrainDataBase {
 				return;
 			}
 
-			if (soundIdString.startsWith("http://") || soundIdString.startsWith("https://")) {
-				NetworkAudioPlayer.playAsync(soundIdString, () -> {
-					System.err.println("Failed to play network audio: " + soundIdString);
-				});
+			if (isNetworkAudioUrl(soundIdString)) {
+				NetworkAudioPlayer.playAsync(soundIdString, (status, statusMessage) -> minecraftClient.execute(() -> {
+					if (minecraftClient.player != null && statusMessage != null) {
+						minecraftClient.player.displayClientMessage(statusMessage, true);
+					}
+				}));
 			} else {
 				world.playLocalSound(player.blockPosition(),
 						RegistryUtilities.createSoundEvent(new ResourceLocation(soundIdString)),
 						SoundSource.BLOCKS, 1000000, 1, false);
 			}
 		});
+	}
+
+	private static boolean isNetworkAudioUrl(String soundIdString) {
+		final String lowerCaseUrl = soundIdString.toLowerCase(Locale.ROOT);
+		return lowerCaseUrl.startsWith("http://") || lowerCaseUrl.startsWith("https://");
 	}
 
 	public static void createRailS2C(Minecraft minecraftClient, FriendlyByteBuf packet) {
