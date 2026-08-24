@@ -573,7 +573,7 @@ public class RouteMapGenerator implements IGui {
 		final int maxTextWidth;
 		if (vertical) {
 			final int capsuleWidth = 2 * radius + thickness;
-			imageWidth = Math.max(scale * 5, capsuleWidth + 2 * textMargin);
+			imageWidth = Math.max(scale * 12, capsuleWidth + 2 * textMargin);
 			imageHeight = Math.round(imageWidth * aspectRatio);
 			straightLength = Math.max(0, imageHeight - 2 * textMargin - capsuleWidth);
 			centerX = imageWidth / 2;
@@ -778,6 +778,17 @@ public class RouteMapGenerator implements IGui {
 
 		if (transparentWhite) {
 			clearColor(image, ARGB_WHITE);
+		}
+
+		if (vertical) {
+			final NativeImage rotated = new NativeImage(NativeImage.Format.RGBA, imageHeight, imageWidth, false);
+			for (int x = 0; x < imageHeight; x++) {
+				for (int y = 0; y < imageWidth; y++) {
+					rotated.setPixelRGBA(x, y, image.getPixelRGBA(imageWidth - 1 - y, x));
+				}
+			}
+			image.close();
+			return rotated;
 		}
 
 		return image;
