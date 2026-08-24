@@ -550,7 +550,7 @@ public class RouteMapGenerator implements IGui {
 			return null;
 		}
 
-		final int thickness = lineSize;
+		final int thickness = vertical ? lineSize * 3 / 2 : lineSize;
 		final int radius = thickness * (vertical ? 8 : 3);
 		final int textMargin = scale * 3 / 4;
 		final int color = ARGB_BLACK | route.color;
@@ -649,8 +649,8 @@ public class RouteMapGenerator implements IGui {
 			final int stationNameMaxWidth;
 			final int stationNameMaxHeight;
 			if (vertical) {
-				stationNameMaxWidth = topRegion || bottomRegion ? Math.min(maxTextWidth, Math.max(16, (int) Math.round(stepLength * 1.1))) : Math.max(16, Math.min(maxTextWidth, (rightRegion ? imageWidth - px : px) - lineSize / 2 - 2));
-				stationNameMaxHeight = Math.max(fontSizeSmall * 2, (int) Math.round(stepLength * 0.8));
+				stationNameMaxWidth = topRegion || bottomRegion ? Math.min(maxTextWidth, Math.max(16, (int) Math.round(stepLength * 1.1))) : Math.max(16, Math.min(maxTextWidth, (rightRegion ? imageWidth - px : px) - thickness / 2 - 4));
+				stationNameMaxHeight = topRegion || bottomRegion ? Math.max(fontSizeSmall * 5 / 4, (topRegion ? py : imageHeight - py) - thickness / 2 - 4) : Math.max(fontSizeSmall * 5 / 4, (int) Math.round(stepLength * 0.8));
 			} else {
 				stationNameMaxWidth = Math.min(maxTextWidth, Math.max(16, (int) Math.round(stepLength * 0.9)));
 				stationNameMaxHeight = (int) ((fontSizeBig + fontSizeSmall) * ClientCache.LINE_HEIGHT_MULTIPLIER);
@@ -675,10 +675,11 @@ public class RouteMapGenerator implements IGui {
 			if (hasInterchange) {
 				final int lineHeight = lineSize * 2;
 				final int lineWidth = (int) Math.ceil((float) lineSize / interchangeColors.size());
+				final int halfLine = vertical ? thickness / 2 : lineSize / 2;
 				if (!vertical || topRegion || bottomRegion) {
 					final boolean putBarBelow = !vertical ? py < centerY : topRegion;
 					colorBarX = px - lineWidth * interchangeColors.size() / 2;
-					colorBarY = putBarBelow ? py + lineSize / 2 + 1 : py - lineSize / 2 - lineHeight - 1;
+					colorBarY = putBarBelow ? py + halfLine + 1 : py - halfLine - lineHeight - 1;
 					for (int j = 0; j < interchangeColors.size(); j++) {
 						for (int drawX = 0; drawX < lineWidth; drawX++) {
 							for (int drawY = 0; drawY < lineHeight; drawY++) {
@@ -687,7 +688,7 @@ public class RouteMapGenerator implements IGui {
 						}
 					}
 				} else {
-					colorBarX = rightRegion ? px - lineSize / 2 - lineHeight - 1 : px + lineSize / 2 + 1;
+					colorBarX = rightRegion ? px - halfLine - lineHeight - 1 : px + halfLine + 1;
 					colorBarY = py - lineWidth * interchangeColors.size() / 2;
 					for (int j = 0; j < interchangeColors.size(); j++) {
 						for (int drawX = 0; drawX < lineHeight; drawX++) {
@@ -750,18 +751,19 @@ public class RouteMapGenerator implements IGui {
 					HorizontalAlignment horizontalAlignment = HorizontalAlignment.CENTER;
 					VerticalAlignment verticalAlignment;
 					if (vertical) {
+						final int textOffset = thickness / 2 + 4;
 						if (topRegion) {
-							textY = py - lineSize / 2 - 2;
+							textY = py - textOffset;
 							verticalAlignment = VerticalAlignment.BOTTOM;
 						} else if (bottomRegion) {
-							textY = py + lineSize / 2 + 2;
+							textY = py + textOffset;
 							verticalAlignment = VerticalAlignment.TOP;
 						} else if (leftRegion) {
-							textX = px - lineSize / 2 - 2;
+							textX = px - textOffset;
 							horizontalAlignment = HorizontalAlignment.RIGHT;
 							verticalAlignment = VerticalAlignment.CENTER;
 						} else {
-							textX = px + lineSize / 2 + 2;
+							textX = px + textOffset;
 							horizontalAlignment = HorizontalAlignment.LEFT;
 							verticalAlignment = VerticalAlignment.CENTER;
 						}

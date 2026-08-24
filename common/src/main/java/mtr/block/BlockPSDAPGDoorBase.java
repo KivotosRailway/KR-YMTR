@@ -165,5 +165,9 @@ public abstract class BlockPSDAPGDoorBase extends BlockPSDAPGBase implements Ent
 		public boolean isOpen() {
 			return open > 0;
 		}
+
+		public int getOpenValue() {
+			return open;
+		}
 	}
 }
