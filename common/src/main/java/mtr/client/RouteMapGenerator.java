@@ -551,7 +551,7 @@ public class RouteMapGenerator implements IGui {
 		}
 
 		final int thickness = lineSize;
-		final int radius = thickness * 3;
+		final int radius = thickness * (vertical ? 8 : 3);
 		final int textMargin = scale * 3 / 4;
 		final int color = ARGB_BLACK | route.color;
 		final List<Route.RoutePlatform> platforms = route.platformIds;
@@ -710,7 +710,8 @@ public class RouteMapGenerator implements IGui {
 				final int interchangeMaxWidth = vertical && !topRegion && !bottomRegion ? Math.max(1, maxTextWidth - lineSize * 2) : Math.max(16, Math.min(maxTextWidth - lineSize * 2, (int) Math.round(stepLength * 1.1)));
 				final byte[] pixels = clientCache.getTextPixels(interchangeNamesStr, dimensions,
 						interchangeMaxWidth, (int) ((fontSizeSmall * 3 / 2) * ClientCache.LINE_HEIGHT_MULTIPLIER),
-						fontSizeSmall * 3 / 4, fontSizeSmall * 3 / 4, 0,
+						vertical ? fontSizeSmall * 15 / 16 : fontSizeSmall * 3 / 4,
+						vertical ? fontSizeSmall * 15 / 16 : fontSizeSmall * 3 / 4, 0,
 						HorizontalAlignment.CENTER);
 				if (pixels != null && dimensions[0] > 0 && dimensions[1] > 0) {
 					int textX = px;
@@ -739,7 +740,8 @@ public class RouteMapGenerator implements IGui {
 				final byte[] pixels = clientCache.getTextPixels(stationName, textDimensions,
 						stationNameMaxWidth,
 						stationNameMaxHeight,
-						fontSizeBig, fontSizeSmall,
+						vertical ? fontSizeBig * 5 / 4 : fontSizeBig,
+						vertical ? fontSizeSmall * 5 / 4 : fontSizeSmall,
 						fontSizeSmall / 4,
 						HorizontalAlignment.CENTER);
 				if (pixels != null && textDimensions[0] > 0 && textDimensions[1] > 0) {
