@@ -20,6 +20,9 @@ public interface IPacket {
 	ResourceLocation PACKET_ANNOUNCE = new ResourceLocation(MTR.MOD_ID, "packet_announce");
 	ResourceLocation PACKET_USE_TIME_AND_WIND_SYNC = new ResourceLocation(MTR.MOD_ID, "packet_use_time_and_wind_sync");
 
+	ResourceLocation PACKET_SERVER_AUDIO_REQUEST = new ResourceLocation(MTR.MOD_ID, "packet_server_audio_request");
+	ResourceLocation PACKET_SERVER_AUDIO_CHUNK = new ResourceLocation(MTR.MOD_ID, "packet_server_audio_chunk");
+
 	ResourceLocation PACKET_CREATE_RAIL = new ResourceLocation(MTR.MOD_ID, "packet_create_rail");
 	ResourceLocation PACKET_UPDATE_RAIL_DATA = new ResourceLocation(MTR.MOD_ID, "update_rail_data");
 	ResourceLocation PACKET_OPEN_RAIL_DATA_EDITOR = new ResourceLocation(MTR.MOD_ID, "open_rail_data_editor");

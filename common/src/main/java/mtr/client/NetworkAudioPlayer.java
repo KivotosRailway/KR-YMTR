@@ -1,7 +1,11 @@
 package mtr.client;
 
 import com.mojang.blaze3d.audio.OggAudioStream;
+import io.netty.buffer.Unpooled;
+import mtr.RegistryClient;
 import mtr.mappings.Text;
+import mtr.packet.IPacket;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 
 import javax.sound.sampled.AudioFormat;
@@ -28,9 +32,13 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class NetworkAudioPlayer {
@@ -47,6 +55,7 @@ public class NetworkAudioPlayer {
 	private static final ExecutorService AUDIO_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
 		final Thread thread = new Thread(r, "MTR-NetworkAudio");
 		thread.setDaemon(true);
+		thread.setContextClassLoader(NetworkAudioPlayer.class.getClassLoader());
 		return thread;
 	});
 
@@ -65,6 +74,8 @@ public class NetworkAudioPlayer {
 	private static final int MAX_REDIRECTS = 5;
 	private static final int IO_BUFFER_SIZE = 8192;
 	private static final long STREAM_BUFFER_LIMIT_BYTES = 4 * 1024 * 1024;
+	private static final int SERVER_AUDIO_FETCH_TIMEOUT_MS = 30000;
+	private static final int MAX_SERVER_AUDIO_SIZE = 16 * 1024 * 1024;
 	private static final Object EOF_MARKER = new Object();
 
 	private static volatile PlayTask currentTask;
@@ -77,34 +88,71 @@ public class NetworkAudioPlayer {
 			}
 			previousTask.cancel();
 		}
-		final PlayTask newTask = new PlayTask(urlString, callback);
+		final PlayTask newTask = new PlayTask(urlString, null, callback);
 		currentTask = newTask;
 		AUDIO_EXECUTOR.submit(newTask);
+	}
+
+	public static void playServerFile(String fileName, StatusCallback callback) {
+		final PlayTask previousTask = currentTask;
+		if (previousTask != null) {
+			if (previousTask.isActive() && fileName.equals(previousTask.serverFileName)) {
+				return;
+			}
+			previousTask.cancel();
+		}
+		final PlayTask newTask = new PlayTask(null, fileName, callback);
+		currentTask = newTask;
+		AUDIO_EXECUTOR.submit(newTask);
+	}
+
+	public static void receiveServerAudioChunk(String fileName, int requestId, boolean success, int errorCode, int totalSize, byte[] chunkData, boolean last) {
+		final PlayTask task = currentTask;
+		if (task == null || task.serverFileName == null || !fileName.equals(task.serverFileName) || !task.isActive()) {
+			return;
+		}
+		task.receiveChunk(requestId, success, errorCode, totalSize, chunkData, last);
 	}
 
 	public static void clearCache() {
 		AUDIO_CACHE.clear();
 	}
 
-	public static void shutdown() {
+	public static boolean isPlaying() {
+		final PlayTask task = currentTask;
+		return task != null && task.isActive();
+	}
+
+	public static void stopAll() {
 		final PlayTask task = currentTask;
 		if (task != null) {
 			task.cancel();
 		}
+	}
+
+	public static void shutdown() {
+		stopAll();
 		AUDIO_EXECUTOR.shutdownNow();
 	}
 
 	private static class PlayTask implements Runnable {
 
 		private final String urlString;
+		private final String serverFileName;
 		private final StatusCallback callback;
 		private volatile boolean cancelled;
 		private volatile boolean finished;
 		private volatile Thread playThread;
 		private volatile HttpURLConnection connection;
+		private volatile CompletableFuture<byte[]> dataFuture;
+		private ByteArrayOutputStream receiveBuffer;
+		private int expectedTotalSize;
+		private int receivedBytes;
+		private int serverAudioRequestId;
 
-		private PlayTask(String urlString, StatusCallback callback) {
+		private PlayTask(String urlString, String serverFileName, StatusCallback callback) {
 			this.urlString = urlString;
+			this.serverFileName = serverFileName;
 			this.callback = callback;
 		}
 
@@ -117,6 +165,10 @@ public class NetworkAudioPlayer {
 			final HttpURLConnection currentConnection = connection;
 			if (currentConnection != null) {
 				currentConnection.disconnect();
+			}
+			final CompletableFuture<byte[]> future = dataFuture;
+			if (future != null) {
+				future.cancel(true);
 			}
 			final Thread thread = playThread;
 			if (thread != null) {
@@ -137,13 +189,13 @@ public class NetworkAudioPlayer {
 						return;
 					} catch (InterruptedIOException e) {
 						return;
-					} catch (Exception e) {
+					} catch (Throwable e) {
 						if (cancelled) {
 							return;
 						}
 						if (attempt < MAX_RETRIES) {
 							notifyStatus(Status.FAILED, null);
-							System.out.println("[MTR] Network audio: playback failed, retrying (" + (attempt + 1) + "/" + MAX_RETRIES + "): " + urlString + " (" + getErrorMessage(e) + ")");
+							System.out.println("[MTR-NetworkAudio] playback failed, retrying (" + (attempt + 1) + "/" + MAX_RETRIES + "): " + urlString + " (" + getErrorMessage(e) + ")");
 							try {
 								sleepInterruptibly(1500L * (attempt + 1));
 							} catch (InterruptedException interruptedException) {
@@ -152,6 +204,8 @@ public class NetworkAudioPlayer {
 							}
 						} else {
 							notifyStatus(Status.FAILED, Text.translatable("gui.mtr.network_audio_failed", getErrorMessage(e)));
+							System.out.println("[MTR-NetworkAudio] playback failed after " + (MAX_RETRIES + 1) + " attempts: " + urlString + " (" + getErrorMessage(e) + ")");
+							e.printStackTrace();
 						}
 					}
 				}
@@ -166,7 +220,11 @@ public class NetworkAudioPlayer {
 
 		private void playOnce() throws Exception {
 			notifyStatus(Status.DOWNLOADING, null);
-			System.out.println("[MTR] Network audio: downloading " + urlString);
+			if (serverFileName != null) {
+				playServerFileOnce();
+				return;
+			}
+			System.out.println("[MTR-NetworkAudio] downloading " + urlString);
 
 			final byte[] cached = AUDIO_CACHE.get(urlString);
 			if (cached != null) {
@@ -186,14 +244,91 @@ public class NetworkAudioPlayer {
 				pushbackStream.unread(magic);
 
 				if (magic[0] == 'R' && magic[1] == 'I' && magic[2] == 'F' && magic[3] == 'F') {
+					System.out.println("[MTR-NetworkAudio] detected WAV, streaming: " + urlString);
 					playWavStreaming(pushbackStream);
 				} else if (magic[0] == 'O' && magic[1] == 'g' && magic[2] == 'g' && magic[3] == 'S') {
+					System.out.println("[MTR-NetworkAudio] detected OGG, streaming: " + urlString);
 					playOggStreaming(pushbackStream);
 				} else {
+					System.out.println("[MTR-NetworkAudio] unknown format, downloading fully: " + urlString);
 					playDecodedData(downloadAll(pushbackStream));
 				}
 			} finally {
 				httpConnection.disconnect();
+			}
+		}
+
+		private void playServerFileOnce() throws Exception {
+			final int requestId = ++serverAudioRequestId;
+			final CompletableFuture<byte[]> future = new CompletableFuture<>();
+			dataFuture = future;
+			System.out.println("[MTR-NetworkAudio] requesting server audio: " + serverFileName + " (request " + requestId + ")");
+			final FriendlyByteBuf requestPacket = new FriendlyByteBuf(Unpooled.buffer());
+			requestPacket.writeUtf(serverFileName);
+			requestPacket.writeInt(requestId);
+			RegistryClient.sendToServer(IPacket.PACKET_SERVER_AUDIO_REQUEST, requestPacket);
+
+			final byte[] data;
+			try {
+				data = future.get(SERVER_AUDIO_FETCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+			} catch (TimeoutException e) {
+				throw new IOException(Text.translatable("gui.mtr.server_audio_timeout").getString());
+			} catch (ExecutionException e) {
+				final Throwable cause = e.getCause();
+				throw cause instanceof IOException ? (IOException) cause : new IOException(String.valueOf(cause == null ? e : cause.getMessage()), cause);
+			}
+			if (data == null || data.length == 0) {
+				throw new IOException(Text.translatable("gui.mtr.server_audio_error").getString());
+			}
+			System.out.println("[MTR-NetworkAudio] received server audio " + data.length + " bytes: " + serverFileName);
+			playDecodedData(data);
+		}
+
+		private void receiveChunk(int requestId, boolean success, int errorCode, int totalSize, byte[] chunkData, boolean last) {
+			synchronized (this) {
+				if (dataFuture == null || dataFuture.isDone() || requestId != serverAudioRequestId) {
+					return;
+				}
+				if (!success) {
+					dataFuture.completeExceptionally(new IOException(getServerAudioErrorText(errorCode)));
+					return;
+				}
+				if (receiveBuffer == null) {
+					if (totalSize <= 0 || totalSize > MAX_SERVER_AUDIO_SIZE) {
+						dataFuture.completeExceptionally(new IOException(Text.translatable("gui.mtr.server_audio_file_too_large").getString()));
+						return;
+					}
+					expectedTotalSize = totalSize;
+					receiveBuffer = new ByteArrayOutputStream(totalSize);
+					System.out.println("[MTR-NetworkAudio] receiving server audio, total " + totalSize + " bytes: " + serverFileName);
+				}
+				if (receivedBytes + chunkData.length > MAX_SERVER_AUDIO_SIZE) {
+					dataFuture.completeExceptionally(new IOException(Text.translatable("gui.mtr.server_audio_file_too_large").getString()));
+					return;
+				}
+				receiveBuffer.write(chunkData, 0, chunkData.length);
+				receivedBytes += chunkData.length;
+				if (last) {
+					if (expectedTotalSize > 0 && receivedBytes != expectedTotalSize) {
+						dataFuture.completeExceptionally(new IOException(Text.translatable("gui.mtr.server_audio_error").getString()));
+						return;
+					}
+					dataFuture.complete(receiveBuffer.toByteArray());
+					receiveBuffer = null;
+				}
+			}
+		}
+
+		private static String getServerAudioErrorText(int errorCode) {
+			switch (errorCode) {
+				case 0:
+					return Text.translatable("gui.mtr.server_audio_file_not_found").getString();
+				case 1:
+					return Text.translatable("gui.mtr.server_audio_file_too_large").getString();
+				case 2:
+					return Text.translatable("gui.mtr.server_audio_invalid_name").getString();
+				default:
+					return Text.translatable("gui.mtr.server_audio_error").getString();
 			}
 		}
 
@@ -240,7 +375,7 @@ public class NetworkAudioPlayer {
 						if (!notified) {
 							notified = true;
 							notifyStatus(Status.PLAYING, null);
-							System.out.println("[MTR] Network audio: playing " + urlString);
+							System.out.println("[MTR-NetworkAudio] playing " + urlString);
 						}
 					}
 					if (!cancelled) {
@@ -303,7 +438,7 @@ public class NetworkAudioPlayer {
 					if (!notified) {
 						notified = true;
 						notifyStatus(Status.PLAYING, null);
-						System.out.println("[MTR] Network audio: playing " + urlString);
+						System.out.println("[MTR-NetworkAudio] playing " + urlString);
 					}
 				}
 				if (!cancelled) {
@@ -347,6 +482,7 @@ public class NetworkAudioPlayer {
 				}
 			}, "MTR-NetworkAudio-Download");
 			thread.setDaemon(true);
+			thread.setContextClassLoader(NetworkAudioPlayer.class.getClassLoader());
 			thread.start();
 			return thread;
 		}
@@ -362,6 +498,7 @@ public class NetworkAudioPlayer {
 				throw new InterruptedIOException("Cancelled");
 			}
 			final byte[] data = byteArrayOutputStream.toByteArray();
+			System.out.println("[MTR-NetworkAudio] downloaded " + data.length + " bytes: " + urlString);
 			if (data.length <= MAX_CACHE_FILE_SIZE) {
 				AUDIO_CACHE.put(urlString, data);
 			}
@@ -385,7 +522,7 @@ public class NetworkAudioPlayer {
 			}
 		}
 
-		private static String getErrorMessage(Exception e) {
+		private static String getErrorMessage(Throwable e) {
 			return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
 		}
 

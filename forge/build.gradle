@@ -35,6 +35,8 @@ dependencies {
 	forgeRuntimeLibrary "javax.servlet:javax.servlet-api:+"
 	forgeRuntimeLibrary "org.msgpack:msgpack-core:+"
 	forgeRuntimeLibrary "com.googlecode.soundlibs:mp3spi:1.9.5.4"
+	forgeRuntimeLibrary "com.googlecode.soundlibs:jlayer:1.0.1.4"
+	forgeRuntimeLibrary "com.googlecode.soundlibs:tritonus-share:0.3.7.4"
 
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
