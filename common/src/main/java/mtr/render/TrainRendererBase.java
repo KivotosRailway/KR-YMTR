@@ -119,7 +119,8 @@ public abstract class TrainRendererBase {
 			} else if (absYawDiff < FLIP_THRESHOLD_DOWN) {
 				flipActive = false;
 			}
-			matrices.translate(offsetX, offsetY, offsetZ);
+			final Vec3 camPos = camera.getPosition();
+			matrices.translate(offsetX - camPos.x, offsetY - camPos.y, offsetZ - camPos.z);
 			UtilitiesClient.rotateYDegrees(matrices, yawDiff + (flipActive ? 180 : 0));
 			matrices.translate(-viewOffset.x, -viewOffset.y, -viewOffset.z);
 		}

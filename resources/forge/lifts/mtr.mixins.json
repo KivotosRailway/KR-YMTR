@@ -9,6 +9,9 @@
 	"client": [
 		"EntitySetOldPosAndRotMixin",
 		"GameRendererMixin",
+		"MSDCatenaryMixin",
+		"MSDRigidCatenaryMixin",
+		"MSDTransCatenaryMixin",
 		"LevelRendererMixin",
 		"PlayerRendererOffsetMixin"
 	],
