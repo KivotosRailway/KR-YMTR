@@ -38,6 +38,18 @@ public final class VoxyDepthCompat {
 	 */
 	private static final boolean BLIT_ENABLED = System.getProperty("mtr.voxy.blitEnabled", "true").equalsIgnoreCase("true");
 
+	/**
+	 * 诊断总开关：-Dmtr.voxy.compat=false 完全禁用所有 MTR-Voxy 兼容修改（本类的 fog 钳制+blit，
+	 * 以及两份 VoxyFogCompatMixin）。仅用于一次性 A/B 定位「开光影时 Voxy 半透明 LOD 不渲染」
+	 * 是否由 MTR 修改引入，定位完成后移除。默认 true。
+	 */
+	private static final boolean COMPAT_ENABLED = !System.getProperty("mtr.voxy.compat", "true").equalsIgnoreCase("false");
+
+	/**
+	 * fog 钳制独立开关：-Dmtr.voxy.fogClamp=false 关闭 fog 钳制（保留 blit）。二分定位用。
+	 */
+	private static final boolean FOG_CLAMP_ENABLED = !System.getProperty("mtr.voxy.fogClamp", "true").equalsIgnoreCase("false");
+
 	private static final Logger LOGGER = LogManager.getLogger("MTR");
 
 	private static boolean initialized;
@@ -65,7 +77,14 @@ public final class VoxyDepthCompat {
 	private static boolean fogClampedLogged;
 	private static boolean loggedNotPresent;
 	private static float lastFogValue = Float.NaN;
-	private static int whiteTexture; // 1x1 白色纹理：blit 时绑 unit 3，防止 EMIT_COLOUR 分支因 alpha==0 discard 而吞掉深度写入
+
+	/**
+	 * 纯深度 blit（反射创建）：FullscreenBlit("voxy:post/blit_texture_depth_cutout.frag")，
+	 * 无 EMIT_COLOUR 宏 —— shader 只写 gl_FragDepth，不采样 unit 3、不做任何 alpha 混合、
+	 * 无 alpha==0 discard 分支。与 Voxy 自己 IrisVoxyRenderPipeline.depthBlit 的构造完全一致。
+	 * 这是保险 2 的正确载体：只补 LOD 深度，杜绝 finalBlit(EMIT_COLOUR) 对后续半透明渲染的一切干扰。
+	 */
+	private static Object pureDepthBlit;
 
 	private VoxyDepthCompat() {
 	}
@@ -75,6 +94,9 @@ public final class VoxyDepthCompat {
 	 * 生效状态以日志 "[MTR-Voxy] Voxy LOD depth write active" 为准。
 	 */
 	public static void writeLodDepthToCurrentFramebuffer() {
+		if (!COMPAT_ENABLED) {
+			return;
+		}
 		if (!initialized) {
 			init();
 		}
@@ -104,7 +126,7 @@ public final class VoxyDepthCompat {
 			// 注意：capturedFogEnd 同时是 Voxy finish 的雾参数（雾距），钳制目标必须用 Voxy 的
 			// 设计雾距量级（sectionRenderDistance*32*16≈32768），不能压缩到渲染距离附近，
 			// 否则半透明 LOD（水/玻璃）的雾在近处结束，被雾覆盖而不渲染/闪烁。
-			if (capturedFogEndField != null) {
+			if (capturedFogEndField != null && FOG_CLAMP_ENABLED) {
 				final float renderDistance = Minecraft.getInstance().gameRenderer.getRenderDistance();
 				final float fogEnd = capturedFogEndField.getFloat(renderSystem);
 				if (fogEnd < renderDistance) {
@@ -144,27 +166,11 @@ public final class VoxyDepthCompat {
 			final Matrix4f targetTransform = new Matrix4f((Matrix4f) vanillaProjectionField.get(viewport)).mul((Matrix4f) modelViewField.get(viewport));
 
 			if (BLIT_ENABLED) {
-			// 1x1 白色纹理：finalBlit 编译时定义了 EMIT_COLOUR 宏，其分支会采样 unit 3 的颜色，
-			// 若 alpha==0 则 discard（连深度一起丢弃）——保险 2 执行时 unit 3 是 vanilla 的任意绑定
-			// （大概率 alpha=0），导致 LOD 深度从未写入。blit 前把 unit 3 绑到纯白纹理（alpha=1）绕过。
-			if (whiteTexture == 0) {
-				whiteTexture = GL11.glGenTextures();
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, whiteTexture);
-				GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, java.nio.ByteBuffer.allocateDirect(4).put(new byte[]{(byte) 255, (byte) 255, (byte) 255, (byte) 255}).flip());
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-			}
-
 			final int oldProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
 			final int oldVao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
 			final int oldElementArrayBuffer = GL11.glGetInteger(GL15.GL_ELEMENT_ARRAY_BUFFER_BINDING);
 			final int oldDrawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
 			final int oldReadFramebuffer = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
-			final int oldActiveTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
-			GL13.glActiveTexture(GL13.GL_TEXTURE0);
-			final int oldTexture0 = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
-			GL13.glActiveTexture(GL13.GL_TEXTURE3);
-			final int oldTexture3 = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
-			GL13.glActiveTexture(GL13.GL_TEXTURE0);
 			final boolean oldDepthTest = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
 			final boolean oldBlend = GL11.glIsEnabled(GL11.GL_BLEND);
 			final boolean oldStencil = GL11.glIsEnabled(GL11.GL_STENCIL_TEST);
@@ -175,24 +181,15 @@ public final class VoxyDepthCompat {
 			GL11.glGetIntegerv(GL11.GL_VIEWPORT, oldViewport);
 
 			try {
-				// 只写深度：gl_FragDepth 不受颜色掩码影响；LOD 深度为 0/1 的像素 discard，不破坏已有深度
+				// 用纯深度 blit（无 EMIT_COLOUR）只写 LOD 深度。
+				// 半透明 LOD 的合成与深度写回由 Voxy 自己的 finish() 完成（fog 钳制已保证其不被跳过），
+				// 保险 2 唯一职责：MTR flush 时主缓冲有 LOD 深度可测试。不再碰 unit 3 / 颜色附件。
 				GL11.glColorMask(false, false, false, false);
 				GL11.glDisable(GL11.GL_STENCIL_TEST);
 				GL11.glDisable(GL11.GL_BLEND);
 				GL11.glEnable(GL11.GL_DEPTH_TEST);
 				GL11.glDepthFunc(GL11.GL_LEQUAL);
-				// unit 3 绑纯白纹理，防止 finalBlit 的 EMIT_COLOUR 分支因 alpha==0 discard 吞掉深度写入
-				GL13.glActiveTexture(GL13.GL_TEXTURE3);
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, whiteTexture);
-				GL13.glActiveTexture(GL13.GL_TEXTURE0);
-				transformBlitDepthMethod.invoke(null, blit.get(pipeline), depthTextureId, targetFramebuffer, viewport, targetTransform);
-
-				// GL 错误观测：blit 若持续产生 GL 错误（累积性问题：玩久了半透明丢失的嫌疑源），打印一次定位
-				final int glError = GL11.glGetError();
-				if (glError != GL11.GL_NO_ERROR && !loggedGlError) {
-					loggedGlError = true;
-					LOGGER.error("[MTR-Voxy] GL error 0x{} after depth blit — potential cause of translucent LOD loss over time", Integer.toHexString(glError));
-				}
+				transformBlitDepthMethod.invoke(null, pureDepthBlit, depthTextureId, targetFramebuffer, viewport, targetTransform);
 			} finally {
 				// 完整恢复 GL 状态
 				GL11.glColorMask(oldColorMask[0] != 0, oldColorMask[1] != 0, oldColorMask[2] != 0, oldColorMask[3] != 0);
@@ -217,17 +214,12 @@ public final class VoxyDepthCompat {
 				GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, oldElementArrayBuffer);
 				GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, oldDrawFramebuffer);
 				GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, oldReadFramebuffer);
-				GL13.glActiveTexture(GL13.GL_TEXTURE0);
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, oldTexture0);
-				GL13.glActiveTexture(GL13.GL_TEXTURE3);
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, oldTexture3);
-				GL13.glActiveTexture(oldActiveTexture);
 				GL11.glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 			}
 
 			if (!loggedActive) {
 				loggedActive = true;
-				LOGGER.info("[MTR-Voxy] Voxy LOD depth write active (first frame OK, target framebuffer " + targetFramebuffer + ")");
+				LOGGER.info("[MTR-Voxy] Voxy LOD depth write active (pure-depth blit, first frame OK, target framebuffer " + targetFramebuffer + ")");
 			}
 			} // BLIT_ENABLED
 		} catch (Throwable t) {
@@ -313,6 +305,10 @@ public final class VoxyDepthCompat {
 			vanillaProjectionField = viewportClass.getField("vanillaProjection");
 			modelViewField = viewportClass.getField("modelView");
 
+			// 纯深度 blit：FullscreenBlit("voxy:post/blit_texture_depth_cutout.frag") 无 EMIT_COLOUR 宏。
+			// 与 Voxy IrisVoxyRenderPipeline.depthBlit 的构造完全一致，只写 gl_FragDepth。
+			pureDepthBlit = fullscreenBlitClass.getConstructor(String.class).newInstance("voxy:post/blit_texture_depth_cutout.frag");
+
 			// Iris 管线（较新版本才有；老版本 Voxy 无此类时忽略）
 			try {
 				final Class<?> irisPipelineClass = voxyLoader.loadClass("me.cortex.voxy.client.core.IrisVoxyRenderPipeline");
@@ -324,10 +320,12 @@ public final class VoxyDepthCompat {
 			}
 
 			available = true;
-			LOGGER.info("[MTR-Voxy] Voxy depth compat initialized OK (render system: {}, pipeline base: {})", voxyRenderSystem.getClass().getName(), normalPipelineClass.getName());
+			LOGGER.info("[MTR-Voxy] Voxy depth compat initialized OK (render system: {}, pipeline base: {}, compat={}, blit={}, fogClamp={})", voxyRenderSystem.getClass().getName(), normalPipelineClass.getName(), COMPAT_ENABLED, BLIT_ENABLED, FOG_CLAMP_ENABLED);
 		} catch (Throwable t) {
 			LOGGER.error("[MTR-Voxy] Voxy depth compat init failed, the MTR-Voxy compat will NOT take effect: {}", t.toString(), t);
 		}
 	}
 
 }
+
+

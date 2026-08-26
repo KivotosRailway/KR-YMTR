@@ -36,6 +36,14 @@ public abstract class VoxyFogCompatMixin {
 
 	@Inject(method = "setCapturedFog", at = @At("TAIL"), remap = false)
 	private void mtr$ensureLodDepthBlitNotSkipped(CallbackInfo ci) {
+		// 诊断总开关：-Dmtr.voxy.compat=false 时完全禁用本 mixin（A/B 定位用）
+		if (!System.getProperty("mtr.voxy.compat", "true").equalsIgnoreCase("true")) {
+			return;
+		}
+		// fog 钳制独立开关：-Dmtr.voxy.fogClamp=false 时禁用（二分定位用）
+		if (!System.getProperty("mtr.voxy.fogClamp", "true").equalsIgnoreCase("true")) {
+			return;
+		}
 		try {
 			final Field capturedFogEndField = getClass().getDeclaredField("capturedFogEnd");
 			capturedFogEndField.setAccessible(true);
