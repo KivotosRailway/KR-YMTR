@@ -1,6 +1,7 @@
 package mtr.data;
 
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CollectionTag;
 import net.minecraft.nbt.CompoundTag;
@@ -170,7 +171,7 @@ public class RailwayDataLoggingModule extends RailwayDataModuleBase {
 			} else if (tag instanceof NumericTag) {
 				return ((NumericTag) tag).getAsNumber().toString();
 			} else {
-				return tempValue.isEmpty() ? "\"\"" : tempValue;
+				return tempValue.isEmpty() ? "\"\"" : new JsonPrimitive(tempValue).toString();
 			}
 		}
 

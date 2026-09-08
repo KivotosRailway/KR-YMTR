@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -191,6 +192,7 @@ public class PacketTrainDataGuiClient extends PacketTrainDataBase {
 		final String message = packet.readUtf();
 		final String soundIdString = packet.readUtf();
 		minecraftClient.execute(() -> {
+			System.out.println("[MTR-NetworkAudio] announce received: '" + soundIdString + "'");
 			IDrawing.narrateOrAnnounce(message);
 			final ClientLevel world = minecraftClient.level;
 			final LocalPlayer player = minecraftClient.player;
@@ -198,16 +200,44 @@ public class PacketTrainDataGuiClient extends PacketTrainDataBase {
 				return;
 			}
 
-			if (soundIdString.startsWith("http://") || soundIdString.startsWith("https://")) {
-				NetworkAudioPlayer.playAsync(soundIdString, () -> {
-					System.err.println("Failed to play network audio: " + soundIdString);
-				});
+			if (isNetworkAudioUrl(soundIdString)) {
+				NetworkAudioPlayer.playAsync(soundIdString, getNetworkAudioStatusCallback(minecraftClient));
+			} else if (soundIdString.startsWith("mtr_server_audio:")) {
+				final String serverFileName = soundIdString.substring("mtr_server_audio:".length()).trim();
+				if (!serverFileName.isEmpty()) {
+					NetworkAudioPlayer.playServerFile(serverFileName, getNetworkAudioStatusCallback(minecraftClient));
+				}
 			} else {
 				world.playLocalSound(player.blockPosition(),
 						RegistryUtilities.createSoundEvent(new ResourceLocation(soundIdString)),
 						SoundSource.BLOCKS, 1000000, 1, false);
 			}
 		});
+	}
+
+	private static NetworkAudioPlayer.StatusCallback getNetworkAudioStatusCallback(Minecraft minecraftClient) {
+		return (status, statusMessage) -> minecraftClient.execute(() -> {
+			if (minecraftClient.player != null && statusMessage != null) {
+				minecraftClient.player.displayClientMessage(statusMessage, true);
+			}
+		});
+	}
+
+	public static void receiveServerAudioChunkS2C(Minecraft minecraftClient, FriendlyByteBuf packet) {
+		final String fileName = packet.readUtf(255);
+		final int requestId = packet.readInt();
+		final boolean success = packet.readBoolean();
+		final int errorCode = packet.readInt();
+		final int totalSize = packet.readInt();
+		final boolean last = packet.readBoolean();
+		final byte[] chunkData = new byte[packet.readableBytes()];
+		packet.readBytes(chunkData);
+		NetworkAudioPlayer.receiveServerAudioChunk(fileName, requestId, success, errorCode, totalSize, chunkData, last);
+	}
+
+	private static boolean isNetworkAudioUrl(String soundIdString) {
+		final String lowerCaseUrl = soundIdString.trim().toLowerCase(Locale.ROOT);
+		return lowerCaseUrl.startsWith("http://") || lowerCaseUrl.startsWith("https://");
 	}
 
 	public static void createRailS2C(Minecraft minecraftClient, FriendlyByteBuf packet) {

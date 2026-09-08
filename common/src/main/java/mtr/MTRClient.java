@@ -9,6 +9,7 @@ import mtr.block.BlockTactileMap;
 import mtr.client.ClientData;
 import mtr.client.Config;
 import mtr.client.IDrawing;
+import mtr.client.NetworkAudioPlayer;
 import mtr.data.Depot;
 import mtr.data.IGui;
 import mtr.data.PIDSType;
@@ -16,6 +17,7 @@ import mtr.data.RailwayData;
 import mtr.data.Route;
 import mtr.data.Station;
 import mtr.item.ItemBlockClickingBase;
+import mtr.mappings.RegistryUtilitiesClient;
 import mtr.packet.IPacket;
 import mtr.packet.PacketTrainDataGuiClient;
 import mtr.render.RenderAPGGlass;
@@ -280,6 +282,7 @@ public class MTRClient implements IPacket {
 		RegistryClient.registerNetworkReceiver(PACKET_OPEN_TRAIN_SENSOR_SCREEN, packet -> PacketTrainDataGuiClient.openTrainSensorScreenS2C(Minecraft.getInstance(), packet));
 		RegistryClient.registerNetworkReceiver(PACKET_OPEN_RESOURCE_PACK_CREATOR_SCREEN, packet -> PacketTrainDataGuiClient.openResourcePackCreatorScreen(Minecraft.getInstance()));
 		RegistryClient.registerNetworkReceiver(PACKET_ANNOUNCE, packet -> PacketTrainDataGuiClient.announceS2C(Minecraft.getInstance(), packet));
+		RegistryClient.registerNetworkReceiver(PACKET_SERVER_AUDIO_CHUNK, packet -> PacketTrainDataGuiClient.receiveServerAudioChunkS2C(Minecraft.getInstance(), packet));
 		RegistryClient.registerNetworkReceiver(PACKET_GENERATE_PATH, packet -> PacketTrainDataGuiClient.generatePathS2C(Minecraft.getInstance(), packet));
 		RegistryClient.registerNetworkReceiver(PACKET_CREATE_RAIL, packet -> PacketTrainDataGuiClient.createRailS2C(Minecraft.getInstance(), packet));
 		RegistryClient.registerNetworkReceiver(PACKET_CREATE_SIGNAL, packet -> PacketTrainDataGuiClient.createSignalS2C(Minecraft.getInstance(), packet));
@@ -314,6 +317,13 @@ public class MTRClient implements IPacket {
 		RegistryClient.registerNetworkReceiver(PACKET_OPEN_LIFT_CUSTOMIZATION_SCREEN, packet -> PacketTrainDataGuiClient.openLiftCustomizationS2C(Minecraft.getInstance(), packet));
 
 		RegistryClient.registerKeyBinding(KeyMappings.LIFT_MENU);
+
+		RegistryUtilitiesClient.registerClientTickEvent(minecraft -> {
+			if (minecraft.level == null && NetworkAudioPlayer.isPlaying()) {
+				NetworkAudioPlayer.stopAll();
+			}
+		});
+		RegistryUtilitiesClient.registerClientStoppingEvent(minecraft -> NetworkAudioPlayer.stopAll());
 
 		if (!Keys.LIFTS_ONLY) {
 			RegistryClient.registerKeyBinding(KeyMappings.TRAIN_ACCELERATE);

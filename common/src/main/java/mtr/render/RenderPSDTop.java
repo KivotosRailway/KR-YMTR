@@ -33,22 +33,27 @@ public class RenderPSDTop extends RenderRouteBase<BlockPSDTop.TileEntityPSDTop> 
 
 	@Override
 	protected RenderType getRenderType(BlockGetter world, BlockPos pos, BlockState state) {
-		final BlockPSDTop.EnumPersistent persistent = IBlock.getStatePropertySafe(state, BlockPSDTop.PERSISTENT);
+		final BlockPSDTop.EnumPersistent persistent = IBlock.getStatePropertySafe(world.getBlockState(pos), BlockPSDTop.PERSISTENT);
 		if (persistent == BlockPSDTop.EnumPersistent.NONE) {
 			final Block blockBelow = world.getBlockState(pos.below()).getBlock();
 			if (blockBelow instanceof BlockPSDAPGDoorBase) {
 				return RenderType.STATION_NAME;
 			} else if (!(blockBelow instanceof BlockPSDAPGGlassEndBase)) {
-				if (isDisplayMode2(world, pos)) {
-					return (Math.floorMod(pos.getX(), 8) < 4) == (Math.floorMod(pos.getZ(), 8) < 4) ? RenderType.ARROW : RenderType.ROUTE;
-				}
-				return RenderType.ROUTE;
+				return isDisplayMode2(world, pos) ? getAlternatingRenderType(pos) : RenderType.ROUTE;
 			} else {
 				return RenderType.NONE;
 			}
+		} else if (persistent == BlockPSDTop.EnumPersistent.ARROW) {
+			return RenderType.STATION_NAME;
+		} else if (persistent == BlockPSDTop.EnumPersistent.ROUTE) {
+			return isDisplayMode2(world, pos) ? getAlternatingRenderType(pos) : RenderType.ROUTE;
 		} else {
-			return persistent == BlockPSDTop.EnumPersistent.ARROW ? RenderType.ARROW : persistent == BlockPSDTop.EnumPersistent.ROUTE ? RenderType.ROUTE : RenderType.NONE;
+			return RenderType.NONE;
 		}
+	}
+
+	private static RenderType getAlternatingRenderType(BlockPos pos) {
+		return (Math.floorMod(pos.getX(), 8) < 4) == (Math.floorMod(pos.getZ(), 8) < 4) ? RenderType.ARROW : RenderType.ROUTE;
 	}
 
 	private boolean isDisplayMode2(BlockGetter world, BlockPos pos) {

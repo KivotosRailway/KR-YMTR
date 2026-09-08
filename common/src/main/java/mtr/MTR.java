@@ -453,6 +453,7 @@ public class MTR implements IPacket {
 		Registry.registerNetworkReceiver(PACKET_UPDATE_ENTITY_SEAT_POSITION, PacketTrainDataGuiServer::receiveUpdateEntitySeatPassengerPosition);
 		Registry.registerNetworkReceiver(PACKET_DRIVE_TRAIN, PacketTrainDataGuiServer::receiveDriveTrainC2S);
 		Registry.registerNetworkReceiver(PACKET_PRESS_LIFT_BUTTON, PacketTrainDataGuiServer::receivePressLiftButtonC2S);
+		Registry.registerNetworkReceiver(PACKET_SERVER_AUDIO_REQUEST, PacketTrainDataGuiServer::receiveServerAudioRequestC2S);
 
 		Registry.registerTickEvent(minecraftServer -> {
 			minecraftServer.getAllLevels().forEach(serverWorld -> {

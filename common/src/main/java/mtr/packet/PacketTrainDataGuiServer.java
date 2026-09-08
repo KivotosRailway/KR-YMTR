@@ -42,6 +42,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.scores.Score;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,6 +54,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -58,6 +64,17 @@ import java.util.function.Function;
 public class PacketTrainDataGuiServer extends PacketTrainDataBase {
 
 	private static final int PACKET_CHUNK_SIZE = (int) Math.pow(2, 14); // 16384
+
+	private static final ExecutorService AUDIO_IO_EXECUTOR = Executors.newFixedThreadPool(2, r -> {
+		final Thread thread = new Thread(r, "MTR-ServerAudio");
+		thread.setDaemon(true);
+		return thread;
+	});
+	private static final Map<UUID, Long> LAST_SERVER_AUDIO_REQUEST_MILLIS = new ConcurrentHashMap<>();
+	private static final long SERVER_AUDIO_REQUEST_COOLDOWN_MS = 5000;
+	private static final int SERVER_AUDIO_MAX_FILE_SIZE = 16 * 1024 * 1024;
+	private static final int SERVER_AUDIO_CHUNK_SIZE = 16384;
+	private static final String SERVER_AUDIO_DIRECTORY_NAME = "mtr_server_audio";
 
 	public static void versionCheckS2C(ServerPlayer player) {
 		final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
@@ -123,10 +140,122 @@ public class PacketTrainDataGuiServer extends PacketTrainDataBase {
 	}
 
 	public static void announceS2C(ServerPlayer player, String message, String soundIdString) {
+		System.out.println("[MTR-ServerAudio] announce sent to " + player.getName().getString() + ": '" + soundIdString + "'");
 		final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
 		packet.writeUtf(message);
 		packet.writeUtf(soundIdString == null ? "" : soundIdString);
 		Registry.sendToPlayer(player, PACKET_ANNOUNCE, packet);
+	}
+
+	public static void receiveServerAudioRequestC2S(MinecraftServer minecraftServer, ServerPlayer player, FriendlyByteBuf packet) {
+		final String fileName = packet.readUtf(255);
+		final int requestId = packet.readInt();
+		final long currentMillis = System.currentTimeMillis();
+		final Long lastRequestMillis = LAST_SERVER_AUDIO_REQUEST_MILLIS.get(player.getUUID());
+		if (lastRequestMillis != null && currentMillis - lastRequestMillis < SERVER_AUDIO_REQUEST_COOLDOWN_MS) {
+			return;
+		}
+		LAST_SERVER_AUDIO_REQUEST_MILLIS.put(player.getUUID(), currentMillis);
+		if (LAST_SERVER_AUDIO_REQUEST_MILLIS.size() > 100) {
+			LAST_SERVER_AUDIO_REQUEST_MILLIS.entrySet().removeIf(entry -> currentMillis - entry.getValue() > 60000);
+		}
+
+		System.out.println("[MTR-ServerAudio] request from " + player.getName().getString() + ": " + fileName + " (request " + requestId + ")");
+
+		if (!isValidServerAudioFileName(fileName)) {
+			sendServerAudioError(player, fileName, requestId, 2);
+			return;
+		}
+
+		AUDIO_IO_EXECUTOR.submit(() -> {
+			try {
+				final Path audioDirectory = minecraftServer.getServerDirectory().toPath().resolve(SERVER_AUDIO_DIRECTORY_NAME);
+				if (!Files.isDirectory(audioDirectory)) {
+					try {
+						Files.createDirectories(audioDirectory);
+						System.out.println("[MTR-ServerAudio] created directory: " + audioDirectory);
+					} catch (IOException e) {
+						System.out.println("[MTR-ServerAudio] failed to create directory " + audioDirectory + ": " + e.getMessage());
+						sendServerAudioError(player, fileName, requestId, 3);
+						return;
+					}
+				}
+				final Path filePath = audioDirectory.resolve(fileName).normalize();
+				if (!filePath.startsWith(audioDirectory) || !Files.isRegularFile(filePath)) {
+					sendServerAudioError(player, fileName, requestId, 0);
+					return;
+				}
+				final Path realAudioDirectory = audioDirectory.toRealPath();
+				final Path realFilePath = filePath.toRealPath();
+				if (!realFilePath.startsWith(realAudioDirectory)) {
+					sendServerAudioError(player, fileName, requestId, 2);
+					return;
+				}
+				final long fileSize = Files.size(realFilePath);
+				if (fileSize <= 0 || fileSize > SERVER_AUDIO_MAX_FILE_SIZE) {
+					sendServerAudioError(player, fileName, requestId, 1);
+					return;
+				}
+				System.out.println("[MTR-ServerAudio] serving " + fileName + " (" + fileSize + " bytes) to " + player.getName().getString());
+				final byte[] data = Files.readAllBytes(realFilePath);
+				sendServerAudioChunks(player, fileName, requestId, data);
+			} catch (Exception e) {
+				System.out.println("[MTR-ServerAudio] failed to serve " + fileName + " to " + player.getName().getString() + ": " + e.getMessage());
+				sendServerAudioError(player, fileName, requestId, 3);
+			}
+		});
+	}
+
+	private static void sendServerAudioChunks(ServerPlayer player, String fileName, int requestId, byte[] data) {
+		int index = 0;
+		int offset = 0;
+		while (offset < data.length) {
+			final int length = Math.min(SERVER_AUDIO_CHUNK_SIZE, data.length - offset);
+			final boolean last = offset + length >= data.length;
+			final FriendlyByteBuf chunkPacket = new FriendlyByteBuf(Unpooled.buffer());
+			chunkPacket.writeUtf(fileName);
+			chunkPacket.writeInt(requestId);
+			chunkPacket.writeBoolean(true);
+			chunkPacket.writeInt(0);
+			chunkPacket.writeInt(data.length);
+			chunkPacket.writeBoolean(last);
+			chunkPacket.writeBytes(data, offset, length);
+			try {
+				Registry.sendToPlayer(player, PACKET_SERVER_AUDIO_CHUNK, chunkPacket);
+			} catch (Exception e) {
+				System.out.println("[MTR-ServerAudio] failed to send chunk to " + player.getName().getString() + ": " + e.getMessage());
+				return;
+			}
+			offset += length;
+			index++;
+			if (!last && (index % 8 == 0)) {
+				try {
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					return;
+				}
+			}
+		}
+		System.out.println("[MTR-ServerAudio] sent " + fileName + " (" + data.length + " bytes, " + (index + 1) + " chunks) to " + player.getName().getString());
+	}
+
+	private static void sendServerAudioError(ServerPlayer player, String fileName, int requestId, int errorCode) {
+		final FriendlyByteBuf errorPacket = new FriendlyByteBuf(Unpooled.buffer());
+		errorPacket.writeUtf(fileName);
+		errorPacket.writeInt(requestId);
+		errorPacket.writeBoolean(false);
+		errorPacket.writeInt(errorCode);
+		errorPacket.writeInt(0);
+		errorPacket.writeBoolean(true);
+		try {
+			Registry.sendToPlayer(player, PACKET_SERVER_AUDIO_CHUNK, errorPacket);
+		} catch (Exception ignored) {
+		}
+	}
+
+	private static boolean isValidServerAudioFileName(String fileName) {
+		return !fileName.isEmpty() && fileName.length() <= 255 && fileName.matches("[A-Za-z0-9._-]+") && !fileName.startsWith(".") && !fileName.contains("..");
 	}
 
 	public static void createRailS2C(Level world, TransportMode transportMode, BlockPos pos1, BlockPos pos2, Rail rail1, Rail rail2, long savedRailId) {
